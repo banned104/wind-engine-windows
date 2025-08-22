@@ -1,2 +1,3 @@
 build/
 CMakeLists.txt.user
+EGL_Component/3rdparty

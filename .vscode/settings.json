@@ -20,6 +20,8 @@
     },
     "peacock.color": "#057748",
     "files.associations": {
-        "qapplication": "cpp"
+        "qapplication": "cpp",
+        "qopenglfunctions": "cpp",
+        "qopenglwidget": "cpp"
     }
 }

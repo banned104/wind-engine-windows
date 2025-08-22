@@ -1,0 +1,63 @@
+# 自动查找当前目录和子目录下的所有.cpp .h 文件 还有.c
+file( GLOB_RECURSE EGL_SOURCES 
+    "*.cpp"
+    "*.c"
+)
+
+# --- 新增 删除某些文件 ---
+# 使用相对于当前 CMakeLists.txt 的路径
+set(FILES_TO_EXCLUDE
+
+    "${CMAKE_CURRENT_SOURCE_DIR}/ModelLoader/ModelLoader_Universal.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/ModelLoader/ModelLoader_Universal.hpp"
+    # 如果还有其他文件需要排除，在这里继续添加
+    # "${CMAKE_CURRENT_SOURCE_DIR}/some_other_dir/some_other_file.cpp"
+)
+
+# 从 EGL_SOURCES 列表中移除指定的文件
+list(REMOVE_ITEM EGL_SOURCES ${FILES_TO_EXCLUDE})
+# --- 结束 删除某些文件 ---
+
+# 将这个组件定义为一个库
+add_library( EGL_Component ${EGL_SOURCES} )
+# Assimp库
+add_subdirectory(3rdparty/assimp)
+
+# 宏定义
+target_compile_definitions( EGL_Component PRIVATE ENABLE_INSTANCING )
+
+# 为这个库指头文件搜索路径 PUBLIC: 表示任何连接了EGL_Component的目标都会自动获得这个头文件路径
+# CMAKE_CURRENT_SOURCE_DIR 代表当前 CMakelists.txt所在的目录
+target_include_directories( EGL_Component PUBLIC 
+                            ${CMAKE_CURRENT_SOURCE_DIR} 
+                            ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/assimp/include
+                            ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty
+                            ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/SOIL2
+                            ${CMAKE_CURRENT_SOURCE_DIR}/component
+                            ${CMAKE_CURRENT_SOURCE_DIR}/Common
+                            ${CMAKE_CURRENT_SOURCE_DIR}/Component_FBO
+                            ${CMAKE_CURRENT_SOURCE_DIR}/Component_3DModels
+                            ${CMAKE_CURRENT_SOURCE_DIR}/Component_Offscreen
+                            ${CMAKE_CURRENT_SOURCE_DIR}/Component_LoadingView
+                            ${CMAKE_CURRENT_SOURCE_DIR}/Component_Shader_Blinn_Phong
+                            ${CMAKE_CURRENT_SOURCE_DIR}/ModelLoader
+                            ${CMAKE_CURRENT_SOURCE_DIR}/Component_Camera
+                            ${CMAKE_CURRENT_SOURCE_DIR}/Component_Silhouette
+                            ${CMAKE_CURRENT_SOURCE_DIR}/Component_Mouse
+                            ${CMAKE_CURRENT_SOURCE_DIR}/Component_UBO
+                            ${CMAKE_CURRENT_SOURCE_DIR}/Component_Box
+                            ${CMAKE_CURRENT_SOURCE_DIR}/Component_Instancing
+                            ${CMAKE_CURRENT_SOURCE_DIR}/Component_Skybox
+                            
+                            ${CMAKE_CURRENT_SOURCE_DIR}/Component_TextureManager
+                            )
+
+# EGL_Component 自身有依赖的库; 任何连接了EGL_Component的目标也会自动连接上这些库
+target_link_libraries( EGL_Component 
+                        PUBLIC 
+                        GLESv3 
+                        EGL 
+                        assimp 
+                        z           # zlib 库, 使能Assimp加载FBX的功能
+                        )
+
