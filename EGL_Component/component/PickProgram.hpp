@@ -12,12 +12,12 @@ public:
     static constexpr GLuint BINDING_GLOBALS = 0;
 
     PickProgram()
-    : ShaderProgram(R"(#version 300 es
+    : ShaderProgram(R"(#version 330 core
         precision mediump float;
-        layout(location = 0) in vec3 aPos;
-        layout(location = 1) in vec3 aNormal;
-        layout(location = 2) in vec2 aTexCoords;
-        layout(location = 3) in mat4 instanceTransform;
+        layout(location=0) in vec3 aPos;
+        layout(location=1) in vec3 aNormal;
+        layout(location=2) in vec2 aUV;
+        layout(location=3) in mat4 instanceTransform;
         #define NUM_INSTANCES 4
 
         layout(std140) uniform Globals {
@@ -47,14 +47,14 @@ public:
                 gl_Position = vec4(2.0,2.0,2.0,1.0);
                 return;
             }
-            TexCoords = aTexCoords;
+            TexCoords = aUV;
             gl_Position = uProj *
                           instanceTransform *
                           uView[gl_InstanceID] *
                           uModel[gl_InstanceID] *
                           vec4(aPos, 1.0);
         })", 
-        R"(#version 300 es
+        R"(#version 330 core
         precision mediump float;
         layout(location = 0) out lowp uint oID;   // GL_R8UI
 

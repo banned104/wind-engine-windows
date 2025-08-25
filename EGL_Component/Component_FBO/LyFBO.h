@@ -15,11 +15,7 @@
 #define GL_GLEXT_PROTOTYPES 1
 #endif
 
-#include <GLES3/gl3.h>
-#include <EGL/egl.h>
-#include <GLES2/gl2.h>
-#include <EGL/eglext.h>
-#include <GLES/gl.h>
+#include <glad/glad.h>
 
 #include <string>
 

@@ -10,14 +10,13 @@
 
 #include <string>
 #include <memory>
-#include <android/native_window.h>
-#include <EGL/egl.h>
-#include <GLES3/gl3.h>
+#include <vector>
 #include <thread> // 用于异步加载模型的线程
 #include <atomic>
-#include <vector>
 #include <ctime>
 #include <random>
+#include <GLFW/glfw3.h>
+#include <glad/glad.h>
 
 #include "ModelLoader_Universal_Instancing.hpp"
 // #include "Component_Shader_Blinn_Phong/PhongModelProgram.hpp"
@@ -48,8 +47,8 @@ struct Globals;
 class ModelRenderer
 {
 public:
-    // 构造函数，接收原生窗口、模型路径和视口尺寸
-    ModelRenderer(ANativeWindow *window, const std::string &modelDir, int width, int height);
+    // 构造函数，接收GLFW窗口、模型路径和视口尺寸
+    ModelRenderer(GLFWwindow* window, const std::string &modelDir, int width, int height);
 
     // 析构函数，用于释放资源
     ~ModelRenderer();
@@ -69,28 +68,22 @@ public:
     void requestPick() { m_pickRequested = true; }
 
 private:
-    // 初始化 EGL 环境
-    bool initEGL();
-    // 初始化 OpenGL ES 相关内容（模型、着色器、矩阵）
+    // 初始化 OpenGL 环境
+    bool initOpenGL();
+    // 初始化 OpenGL 相关内容（模型、着色器、矩阵）
     void initGLES(const std::string &modelDir);
-    // 释放 EGL 资源
-    void destroyEGL();
+    // 释放 OpenGL 资源
+    void destroyOpenGL();
 
-    ANativeWindow *mWindow;
+    GLFWwindow* mWindow;
     int mWidth;
     int mHeight;
-
-    // EGL 相关
-    EGLDisplay mDisplay = EGL_NO_DISPLAY;
-    EGLSurface mSurface = EGL_NO_SURFACE;
-    EGLContext mContext = EGL_NO_CONTEXT;
 
     // 模型异步加载相关
     std::thread mLoadingThread;
     std::atomic<bool> mIsModelLoaded{false}; // 原子化布尔值 保证线程安全
     std::atomic<bool> mIsFirstDrawAfterModelLoaded{true};
     std::atomic<bool> mIsFirstTouchPadLoaded{true};
-    
 
     // 渲染相关
     std::unique_ptr<Model> mModel;

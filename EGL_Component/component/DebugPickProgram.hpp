@@ -4,7 +4,7 @@
 class DebugPickProgram : public ShaderProgram {
 public:
     DebugPickProgram()
-    : ShaderProgram(R"(#version 300 es
+    : ShaderProgram(R"(#version 330 core
         precision mediump float;
         layout(location=0) in vec2 aPos;
         layout(location=1) in vec2 aUV;
@@ -13,7 +13,7 @@ public:
             vUV = aUV;
             gl_Position = vec4(aPos, 0.0, 1.0);
         })",
-        R"(#version 300 es
+        R"(#version 330 core
         precision mediump float;
         uniform highp usampler2D uPick;   // 整数纹理
         in vec2 vUV;

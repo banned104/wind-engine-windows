@@ -103,7 +103,7 @@ private:
     /* ---- 升级后的 GLSL 着色器代码 ---- */
 
     // 顶点着色器：扩展，以传递更多信息给片段着色器
-    static constexpr const char* kVertexSrc = R"(#version 300 es
+    static constexpr const char* kVertexSrc = R"(#version 330 core
         precision mediump float;
 
         layout(location = 0) in vec3 aPos;
@@ -139,7 +139,7 @@ private:
     )";
 
     // 片段着色器：实现 Phong 光照模型
-    static constexpr const char* kFragmentSrc = R"(#version 300 es
+    static constexpr const char* kFragmentSrc = R"(#version 330 core
         precision mediump float;
 
         // 从顶点着色器传入的、经过插值的数据

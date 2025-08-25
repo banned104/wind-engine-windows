@@ -1,7 +1,7 @@
 #pragma once
 
 #include "LyFBO.h"
-#include <GLES3/gl3.h>  // or appropriate GL include
+#include <glad/glad.h>  // or appropriate GL include
 
 /**
  * @file LyFBOMSAA.h

@@ -34,7 +34,7 @@ private:
     GLuint blockIndex;
 
     constexpr static const char* vertex_shader = R"(
-        #version 300 es
+        #version 330 core
         layout (location = 0) in vec3 aPos;
         // layout (location = 1) in vec2 aTexCoords;
         // layout (location = 2) in vec3 aNormal;
@@ -62,7 +62,7 @@ private:
     )";
 
     constexpr static const char* frag_shader = R"(
-        #version 300 es
+        #version 330 core
         precision mediump float;
         layout( location = 0 ) out uint out_id;
 

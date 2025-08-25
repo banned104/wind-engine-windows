@@ -66,7 +66,7 @@ private:
     /* ---- 简化的 GLSL 着色器代码 ---- */
 
     // 顶点着色器：只做最基本的 MVP 变换
-    static constexpr const char* kVertexSrc = R"(#version 300 es
+    static constexpr const char* kVertexSrc = R"(#version 330 core
         precision mediump float;
 
         layout(location = 0) in vec3 aPos;
@@ -89,7 +89,7 @@ private:
     )";
 
     // 片段着色器：只做最基本的纹理采样
-    static constexpr const char* kFragmentSrc = R"(#version 300 es
+    static constexpr const char* kFragmentSrc = R"(#version 330 core
         precision mediump float;
 
         in vec2 TexCoords;

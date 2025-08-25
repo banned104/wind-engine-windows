@@ -4,26 +4,17 @@
 #define GL_GLEXT_PROTOTYPES 1
 #endif
 
-#include <GLES/gl.h>
-#include <GLES2/gl2.h>
-#include <GLES2/gl2ext.h>
-#include <GLES3/gl3.h>
-#include <EGL/egl.h>
-#include <EGL/eglext.h>
-#include <android/native_window.h>
+#include <glad/glad.h>
+#include <GLFW/glfw3.h>
 
 #include <string>
 
-
-// #include <android/log.h>
-// #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, TAG, __VA_ARGS__)
-// #define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, TAG, __VA_ARGS__)   
 #define DEBUG_GL_ENABLE 1
 #if DEBUG_GL_ENABLE
-#include <android/log.h>
+#include <iostream>
 #define LOG_TAG "CPP TAG"
-#define LOGI(...) __android_log_print( ANDROID_LOG_INFO,  LOG_TAG, __VA_ARGS__ )
-#define LOGE(...) __android_log_print( ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__ )
+#define LOGI(...) std::cout << "INFO: " << __VA_ARGS__ << std::endl
+#define LOGE(...) std::cerr << "ERROR: " << __VA_ARGS__ << std::endl
 
 #define GLES_CHECK_ERROR(x)                                                         \
 	x;																		        \
@@ -52,7 +43,7 @@
 				break;                                                              \
 			}                                                                       \
 																					\
-			std::string formattedError = "OpenGL ES : ";                            \
+			std::string formattedError = "OpenGL : ";                               \
 			formattedError = formattedError + error;                                \
 			formattedError = formattedError + ", file : ";                          \
 			formattedError = formattedError + __FILE__;                             \

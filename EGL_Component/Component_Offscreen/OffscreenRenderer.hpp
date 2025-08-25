@@ -1,7 +1,7 @@
 #pragma once
 
 #include <memory>
-#include <GLES3/gl3.h>
+#include <glad/glad.h>
 #include "../Component_FBO/LyFBOMSAA.h"
 #include "component/ShaderProgram.hpp"
 

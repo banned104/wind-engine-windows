@@ -1,4 +1,4 @@
-#include <GLES3/gl3.h>
+#include <glad/glad.h>
 #include "glm/glm.hpp"
 #include "ShaderProgram.hpp"
 
@@ -105,7 +105,7 @@ private:
 
     // --- 修改后的着色器代码 ---
     constexpr static const char* vertex_shader = R"(
-        #version 300 es
+        #version 330 core
         layout (location = 0) in vec2 aPos;
         layout (location = 1) in vec3 aColor;
 
@@ -125,7 +125,7 @@ private:
     )";
 
     constexpr static const char* frag_shader = R"(
-        #version 300 es
+        #version 330 core
         precision mediump float;
         in vec3 fragColor;
         out vec4 FragColor;

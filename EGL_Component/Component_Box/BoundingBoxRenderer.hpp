@@ -1,6 +1,6 @@
 #pragma once
 
-#include <GLES3/gl3.h>
+#include <glad/glad.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -78,7 +78,7 @@ private:
         
         // 顶点着色器源码
         static constexpr const char* kVertexSrc = R"(
-            #version 300 es
+            #version 330 core
             precision mediump float;
             
             layout(location = 0) in vec3 aPosition;
@@ -92,7 +92,7 @@ private:
         
         // 片段着色器源码
         static constexpr const char* kFragmentSrc = R"(
-            #version 300 es
+            #version 330 core
             precision mediump float;
             
             uniform vec3 uColor;

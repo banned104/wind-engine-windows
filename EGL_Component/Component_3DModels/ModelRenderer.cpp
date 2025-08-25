@@ -3,10 +3,10 @@
 
 auto startTime = std::chrono::high_resolution_clock::now();
 
-ModelRenderer::ModelRenderer(ANativeWindow* window, const std::string& modelDir, int width, int height)
+ModelRenderer::ModelRenderer(GLFWwindow* window, const std::string& modelDir, int width, int height)
     : mWindow(window), mWidth(width), mHeight(height) {
-    if (!initEGL()) {
-        LOGE("EGL initialization failed.");
+    if (!initOpenGL()) {
+        LOGE("OpenGL initialization failed.");
         return;
     }
 
@@ -35,59 +35,22 @@ ModelRenderer::~ModelRenderer() {
         mBoundingBoxRenderer.reset();
     }
 
-    destroyEGL();
+    destroyOpenGL();
     // unique_ptr 会自动释放 mModel 和 mProgram
 
 }
 
-bool ModelRenderer::initEGL() {
-    // --- 这部分代码基本可以从你的 jni_cpp.cpp 中复制 ---
-    mDisplay = eglGetDisplay(EGL_DEFAULT_DISPLAY);
-    if (mDisplay == EGL_NO_DISPLAY) {
-        LOGE("eglGetDisplay failed");
+bool ModelRenderer::initOpenGL() {
+    // 确保GLFW窗口的OpenGL上下文是当前的
+    glfwMakeContextCurrent(mWindow);
+    
+    // 初始化glad
+    if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
+        LOGE("Failed to initialize GLAD");
         return false;
     }
-
-    if (eglInitialize(mDisplay, nullptr, nullptr) != EGL_TRUE) {
-        LOGE("eglInitialize failed");
-        return false;
-    }
-
-    EGLConfig config;
-    EGLint numConfigs;
-    EGLint configAttribs[] = {
-        EGL_SURFACE_TYPE, EGL_WINDOW_BIT,
-        EGL_RED_SIZE, 8,
-        EGL_GREEN_SIZE, 8,
-        EGL_BLUE_SIZE, 8,
-        EGL_DEPTH_SIZE, 24, // !! 添加深度缓冲配置，对于3D渲染至关重要 !!
-        EGL_RENDERABLE_TYPE, EGL_OPENGL_ES3_BIT, // 使用 GLES 3
-        EGL_NONE
-    };
-
-    if (eglChooseConfig(mDisplay, configAttribs, &config, 1, &numConfigs) != EGL_TRUE) {
-        LOGE("eglChooseConfig failed");
-        return false;
-    }
-
-    mSurface = eglCreateWindowSurface(mDisplay, config, mWindow, nullptr);
-    if (mSurface == EGL_NO_SURFACE) {
-        LOGE("eglCreateWindowSurface failed");
-        return false;
-    }
-
-    EGLint contextAttribs[] = { EGL_CONTEXT_CLIENT_VERSION, 3, EGL_NONE };
-    mContext = eglCreateContext(mDisplay, config, EGL_NO_CONTEXT, contextAttribs);
-    if (mContext == EGL_NO_CONTEXT) {
-        LOGE("eglCreateContext failed");
-        return false;
-    }
-
-    if (eglMakeCurrent(mDisplay, mSurface, mSurface, mContext) != EGL_TRUE) {
-        LOGE("eglMakeCurrent failed");
-        return false;
-    }
-    LOGI("EGL Initialized Successfully.");
+    
+    LOGI("OpenGL Initialized Successfully.");
     return true;
 }
 
@@ -169,7 +132,7 @@ void ModelRenderer::draw() {
 
         mOffscreenRenderer->endFrame();   // 解析FBO
         mOffscreenRenderer->drawToScreen(); // 将结果绘制到屏幕
-        eglSwapBuffers(mDisplay, mSurface);
+        glfwSwapBuffers(mWindow);
         return;
     } 
 
@@ -435,24 +398,13 @@ void ModelRenderer::draw() {
     mOffscreenRenderer->drawToScreen(); // 将结果绘制到屏幕
 
     // 交换缓冲区
-    eglSwapBuffers(mDisplay, mSurface);
+    glfwSwapBuffers(mWindow);
 }
 
-void ModelRenderer::destroyEGL() {
-    if (mDisplay != EGL_NO_DISPLAY) {
-        eglMakeCurrent(mDisplay, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
-        if (mContext != EGL_NO_CONTEXT) {
-            eglDestroyContext(mDisplay, mContext);
-        }
-        if (mSurface != EGL_NO_SURFACE) {
-            eglDestroySurface(mDisplay, mSurface);
-        }
-        eglTerminate(mDisplay);
-    }
-    mDisplay = EGL_NO_DISPLAY;
-    mContext = EGL_NO_CONTEXT;
-    mSurface = EGL_NO_SURFACE;
-    ANativeWindow_release(mWindow);
+void ModelRenderer::destroyOpenGL() {
+    // 清理GLFW窗口
+    glfwDestroyWindow(mWindow);
+    glfwTerminate();
 }
 
 

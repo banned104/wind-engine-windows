@@ -1,4 +1,4 @@
-#version 310 es
+#version 330 core
 //precision mediump float;
 precision highp float;
 #define INSTANCES_COUNT 4
