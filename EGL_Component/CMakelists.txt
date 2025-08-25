@@ -20,8 +20,6 @@ list(REMOVE_ITEM EGL_SOURCES ${FILES_TO_EXCLUDE})
 
 # 将这个组件定义为一个库
 add_library( EGL_Component ${EGL_SOURCES} )
-# Assimp库
-add_subdirectory(3rdparty/assimp)
 
 # 宏定义
 target_compile_definitions( EGL_Component PRIVATE ENABLE_INSTANCING )
@@ -33,6 +31,8 @@ target_include_directories( EGL_Component PUBLIC
                             ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/assimp/include
                             ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty
                             ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/SOIL2
+                            ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/glad/include
+                            ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/glfw/include
                             ${CMAKE_CURRENT_SOURCE_DIR}/component
                             ${CMAKE_CURRENT_SOURCE_DIR}/Common
                             ${CMAKE_CURRENT_SOURCE_DIR}/Component_FBO
@@ -49,9 +49,16 @@ target_include_directories( EGL_Component PUBLIC
                             ${CMAKE_CURRENT_SOURCE_DIR}/Component_Instancing
                             ${CMAKE_CURRENT_SOURCE_DIR}/Component_Skybox
                             ${CMAKE_CURRENT_SOURCE_DIR}/Component_TextureManager
-                            ${CMAKE_CURRENT_SOURCE_DIR}/glfw/include
-                            ${CMAKE_CURRENT_SOURCE_DIR}/glad
                             )
+
+
+# GLAD库 
+add_subdirectory(3rdparty/glad)
+# Assimp库
+add_subdirectory(3rdparty/assimp)
+# GLFW库
+add_subdirectory(3rdparty/glfw)
+
 
 # EGL_Component 自身有依赖的库; 任何连接了EGL_Component的目标也会自动连接上这些库
 target_link_libraries( EGL_Component 
@@ -59,5 +66,7 @@ target_link_libraries( EGL_Component
                         OpenGL::GL
                         assimp 
                         z           # zlib 库, 使能Assimp加载FBX的功能
+                        glfw
+                        glad
                         )
 

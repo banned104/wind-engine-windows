@@ -4,7 +4,7 @@
 #include <unordered_map>
 #include <memory>
 #include <vector>
-#include <GLES3/gl3.h>
+#include<glad/glad.h>
 
 /**
  * @brief 全局纹理管理器 - 单例模式

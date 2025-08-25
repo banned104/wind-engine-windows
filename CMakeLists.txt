@@ -12,8 +12,8 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 # 查找OpenGL
 find_package(OpenGL REQUIRED)
 
-# 添加3rdparty目录
-add_subdirectory(3rdparty)
+# 设置 GLFW 为静态库
+set(GLFW_BUILD_SHARED_LIBS OFF)
 
 # 添加EGL_Component库
 add_subdirectory(EGL_Component)
@@ -34,6 +34,6 @@ target_link_libraries(${PROJECT_NAME}
 target_include_directories(${PROJECT_NAME} 
     PRIVATE 
     ${CMAKE_SOURCE_DIR}/EGL_Component
-    ${CMAKE_SOURCE_DIR}/3rdparty/glad/include
-    ${CMAKE_SOURCE_DIR}/3rdparty/glfw/include
+    ${CMAKE_SOURCE_DIR}/EGL_Component/3rdparty/glad/include
+    ${CMAKE_SOURCE_DIR}/EGL_Component/3rdparty/glfw/include
 )

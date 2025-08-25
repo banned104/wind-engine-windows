@@ -22,6 +22,11 @@
     "files.associations": {
         "qapplication": "cpp",
         "qopenglfunctions": "cpp",
-        "qopenglwidget": "cpp"
+        "qopenglwidget": "cpp",
+        "memory": "cpp",
+        "memory_resource": "cpp",
+        "semaphore": "cpp",
+        "shared_mutex": "cpp",
+        "stop_token": "cpp"
     }
 }

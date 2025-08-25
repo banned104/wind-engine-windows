@@ -15,8 +15,8 @@
 #include <atomic>
 #include <ctime>
 #include <random>
-#include <GLFW/glfw3.h>
 #include <glad/glad.h>
+#include <GLFW/glfw3.h>
 
 #include "ModelLoader_Universal_Instancing.hpp"
 // #include "Component_Shader_Blinn_Phong/PhongModelProgram.hpp"

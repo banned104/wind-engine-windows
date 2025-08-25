@@ -2,3 +2,4 @@ build/
 CMakeLists.txt.user
 EGL_Component/3rdparty
 .cache
+build_win

@@ -13,8 +13,8 @@
 #if DEBUG_GL_ENABLE
 #include <iostream>
 #define LOG_TAG "CPP TAG"
-#define LOGI(...) std::cout << "INFO: " << __VA_ARGS__ << std::endl
-#define LOGE(...) std::cerr << "ERROR: " << __VA_ARGS__ << std::endl
+#define LOGI(...) fprintf(stdout, "INFO: "); fprintf(stdout, __VA_ARGS__); fprintf(stdout, "\n")
+#define LOGE(...) fprintf(stderr, "ERROR: "); fprintf(stderr, __VA_ARGS__); fprintf(stderr, "\n")
 
 #define GLES_CHECK_ERROR(x)                                                         \
 	x;																		        \

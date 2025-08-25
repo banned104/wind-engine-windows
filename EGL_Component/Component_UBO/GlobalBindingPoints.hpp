@@ -1,5 +1,5 @@
 #pragma once
-#include <GLES3/gl3.h>
+#include<glad/glad.h>
 /**
  * @brief 定义整个应用程序中使用的全局 Uniform Buffer Object (UBO) 绑定点。
  *

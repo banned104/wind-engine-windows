@@ -4,7 +4,7 @@
 #include  "macros.h"
 #include <glm/glm.hpp>
 #include <stdexcept>
-
+#include <functional>
 #include "CameraInteractor.hpp"
 
 struct WindUBO;
