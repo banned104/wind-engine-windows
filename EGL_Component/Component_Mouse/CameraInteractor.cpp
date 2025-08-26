@@ -1,6 +1,7 @@
-#include "CameraInteractor.hpp"
+﻿#include "CameraInteractor.hpp"
 
 #include "macros.h"
+#include "corecrt_math_defines.h"
 
 CameraInteractor::CameraInteractor(Camera* camera)
     : m_camera(camera) {

@@ -1,7 +1,7 @@
-#include "BoundingBoxRenderer.hpp"
+﻿#include "BoundingBoxRenderer.hpp"
 
 BoundingBoxRenderer::BoundingBoxRenderer() {
-    // 构造函数中不进行OpenGL操作，因为可能还没有OpenGL上下文
+    
 }
 
 BoundingBoxRenderer::~BoundingBoxRenderer() {

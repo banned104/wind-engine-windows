@@ -1,4 +1,13 @@
-cmake_minimum_required(VERSION 3.16)
+﻿cmake_minimum_required(VERSION 3.16)
+
+# 设置MSVC编译器工具集为14.3（VS2022 17.8版本） platform.c : fatal error C1001: 内部编译器错误 
+if(MSVC)
+    set(CMAKE_GENERATOR_TOOLSET "v143,version=14.38")
+endif()
+
+
+
+
 project(thread_cpp_glfw)
 
 set(CMAKE_CXX_STANDARD 17)
@@ -14,6 +23,9 @@ find_package(OpenGL REQUIRED)
 
 # 设置 GLFW 为静态库
 set(GLFW_BUILD_SHARED_LIBS OFF)
+
+# 禁用C4034警告
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /wd4034")
 
 # 添加EGL_Component库
 add_subdirectory(EGL_Component)
