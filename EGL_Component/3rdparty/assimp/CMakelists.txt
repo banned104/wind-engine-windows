@@ -1,0 +1,41 @@
+# Assimp library configuration for different platforms
+
+# Windows MSVC platform
+if(WIN32)
+    if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+        set(ASSIMP_LIB_PATH ${CMAKE_CURRENT_SOURCE_DIR}/windows-x64-msvc/assimp-vc143-mtd.lib)
+    else()
+        set(ASSIMP_LIB_PATH ${CMAKE_CURRENT_SOURCE_DIR}/windows-x64-msvc/assimp-vc143-mt.lib)
+    endif()
+    
+    if(NOT EXISTS ${ASSIMP_LIB_PATH})
+        message(WARNING "Assimp library not found: ${ASSIMP_LIB_PATH}")
+        message(WARNING "Please run build_assimp_debug.bat or build_assimp_msvc.bat to build the library")
+    endif()
+    
+    add_library(assimp STATIC IMPORTED)
+    set_target_properties(assimp PROPERTIES 
+        IMPORTED_LOCATION ${ASSIMP_LIB_PATH}
+        IMPORTED_IMPLIB ${ASSIMP_LIB_PATH}
+    )
+    
+# Android platform
+elseif(ANDROID)
+    set(ASSIMP_LIB_PATH ${CMAKE_CURRENT_SOURCE_DIR}/arm64-v8a/libassimp.a)
+    add_library(assimp STATIC IMPORTED)
+    set_target_properties(assimp PROPERTIES 
+        IMPORTED_LOCATION ${ASSIMP_LIB_PATH}
+    )
+    
+# Linux/macOS desktop
+else()
+    set(ASSIMP_LIB_PATH ${CMAKE_CURRENT_SOURCE_DIR}/windows-x64/libassimp.a)
+    add_library(assimp STATIC IMPORTED)
+    set_target_properties(assimp PROPERTIES 
+        IMPORTED_LOCATION ${ASSIMP_LIB_PATH}
+    )
+endif()
+
+# Include directories
+set(ASSIMP_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
+target_include_directories(assimp INTERFACE ${ASSIMP_INCLUDE_DIR})
