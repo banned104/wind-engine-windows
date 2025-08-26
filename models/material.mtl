@@ -1,0 +1,16 @@
+newmtl Material_chufeng02
+Kd 0.588 0.588 0.588
+map_Kd chufeng02.jpg
+map_Ks chufengmask.jpg
+map_Ka headtail.jpg
+# EMISSIVE
+map_Ke headtailmask.jpg
+map_Bump wavenoise.jpg
+
+newmtl Material_chufeng01
+Kd 0.588 0.588 0.588
+map_Kd chufeng01.jpg
+
+newmtl Material_chufeng03
+Kd 0.588 0.588 0.588
+map_Kd chufeng03.png

@@ -1,39 +1,40 @@
 ﻿cmake_minimum_required(VERSION 3.16)
 
-# 设置MSVC编译器工具集为14.3（VS2022 17.8版本） platform.c : fatal error C1001: 内部编译器错误 
+# Set MSVC compiler toolset to 14.3 (VS2022 17.8 version) platform.c : fatal error C1001: internal compiler error 
 if(MSVC)
     set(CMAKE_GENERATOR_TOOLSET "v143,version=14.38")
+    # Disable C4034 warning for MSVC
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /wd4034")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd4034")
+elseif(MINGW)
+    # MinGW/GCC specific flags
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-unused-parameter")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unused-parameter")
 endif()
-
-
-
 
 project(thread_cpp_glfw)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# 设置输出目录
+# Set output directories
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 
-# 查找OpenGL
+# Find OpenGL
 find_package(OpenGL REQUIRED)
 
-# 设置 GLFW 为静态库
+# Set GLFW as static library
 set(GLFW_BUILD_SHARED_LIBS OFF)
 
-# 禁用C4034警告
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /wd4034")
-
-# 添加EGL_Component库
+# Add EGL_Component library
 add_subdirectory(EGL_Component)
 
-# 创建可执行文件
+# Create executable
 add_executable(${PROJECT_NAME} main.cpp)
 
-# 链接库
+# Link libraries
 target_link_libraries(${PROJECT_NAME} 
     PRIVATE 
     EGL_Component
@@ -42,10 +43,18 @@ target_link_libraries(${PROJECT_NAME}
     OpenGL::GL
 )
 
-# 设置包含目录
+# Set include directories
 target_include_directories(${PROJECT_NAME} 
     PRIVATE 
     ${CMAKE_SOURCE_DIR}/EGL_Component
     ${CMAKE_SOURCE_DIR}/EGL_Component/3rdparty/glad/include
     ${CMAKE_SOURCE_DIR}/EGL_Component/3rdparty/glfw/include
+)
+
+# Copy resource files to output folder
+add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+    "${CMAKE_SOURCE_DIR}/models"
+    "$<TARGET_FILE_DIR:${PROJECT_NAME}>/models"
+    COMMENT "Copying models directory to output folder"
 )

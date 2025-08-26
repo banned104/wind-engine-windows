@@ -1,15 +1,21 @@
-#include "ModelRenderer.hpp"
+﻿#include "ModelRenderer.hpp"
 #include "macros.h" 
 
 auto startTime = std::chrono::high_resolution_clock::now();
 
 ModelRenderer::ModelRenderer(GLFWwindow* window, const std::string& modelDir, int width, int height)
     : mWindow(window), mWidth(width), mHeight(height) {
-    if (!initOpenGL()) {
-        LOGE("OpenGL initialization failed.");
+    // 移除重复的GLAD初始化，因为main.cpp已经初始化过了
+    // 只需确保上下文是当前即可
+    glfwMakeContextCurrent(mWindow);
+    
+    // 验证OpenGL是否已初始化
+    if (!glGetString(GL_VERSION)) {
+        LOGE("OpenGL context not available");
+        mIsInitialized = false;
         return;
     }
-
+    
     // 初始化所有实例的偏移为0
     for (int i = 0; i < INSTANCES_COUNT; i++) {
         m_instanceOffsets[i].deltaX = 0.0f;
@@ -18,9 +24,18 @@ ModelRenderer::ModelRenderer(GLFWwindow* window, const std::string& modelDir, in
         m_instanceOffsets[i]._padding2 = 0.0f;
     }
 
-    mOffscreenRenderer = std::make_unique<OffscreenRenderer>( width, height );
+    // 确保OffscreenRenderer总是被初始化
+    try {
+        mOffscreenRenderer = std::make_unique<OffscreenRenderer>(width, height);
+        mIsInitialized = true;
+    } catch (const std::exception& e) {
+        LOGE("Failed to create OffscreenRenderer: %s", e.what());
+        mIsInitialized = false;
+    }
 
-    initGLES(modelDir);
+    if (mIsInitialized) {
+        initGLES(modelDir);
+    }
 }
 
 ModelRenderer::~ModelRenderer() {
@@ -41,16 +56,16 @@ ModelRenderer::~ModelRenderer() {
 }
 
 bool ModelRenderer::initOpenGL() {
-    // 确保GLFW窗口的OpenGL上下文是当前的
+    // 只需确保上下文是当前即可，不需要重复初始化GLAD
     glfwMakeContextCurrent(mWindow);
     
-    // 初始化glad
-    if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
-        LOGE("Failed to initialize GLAD");
+    // 验证OpenGL是否可用
+    if (!glGetString(GL_VERSION)) {
+        LOGE("OpenGL context not available");
         return false;
     }
     
-    LOGI("OpenGL Initialized Successfully.");
+    LOGI("OpenGL context verified successfully.");
     return true;
 }
 
@@ -120,6 +135,11 @@ void ModelRenderer::initGLES(const std::string& modelDir) {
 }
 
 void ModelRenderer::draw() {
+    if (!mIsInitialized || !mOffscreenRenderer) {
+        // 显示加载界面或错误信息
+        return;
+    }
+    
     // * 若模型太大会出现白屏问题, 此处用于显示加载界面或者什么都不做( 仅显示透明 )
     if (!mIsModelLoaded) { 
         LOGI("Renderer not initialized, Loading view is presenting.");

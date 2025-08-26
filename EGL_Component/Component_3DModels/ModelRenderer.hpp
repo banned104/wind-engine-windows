@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #define __OFFSCREEN_RENDERING__
 #define __3D_CAMERA__
@@ -68,6 +68,7 @@ public:
     void requestPick() { m_pickRequested = true; }
 
 private:
+    bool mIsInitialized = false;
     // 初始化 OpenGL 环境
     bool initOpenGL();
     // 初始化 OpenGL 相关内容（模型、着色器、矩阵）

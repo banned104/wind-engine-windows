@@ -1,7 +1,7 @@
 ﻿#include <iostream>
 #include <memory>
 #include <thread>
-#include <mutex>
+
 #include <atomic>
 #include <chrono>
 #include <string>
@@ -15,14 +15,12 @@
 
 // 全局变量
 static std::atomic<bool> g_is_rendering{false};
-static std::thread g_render_thread;
-static std::mutex g_renderer_mutex;
+
 static ModelRenderer* g_renderer = nullptr;
 static GLFWwindow* g_window = nullptr;
 
-// 触摸事件回调函数
+// 触摸事件回调函数（单线程版本，移除mutex）
 void onTouchDown(float x, float y) {
-    std::lock_guard<std::mutex> lock(g_renderer_mutex);
     if (g_renderer && g_renderer->getInteractor()) {
         g_renderer->getInteractor()->onMouseDown(x, y, CameraInteractor::MouseButton::Left);
         g_renderer->requestPick();
@@ -30,21 +28,18 @@ void onTouchDown(float x, float y) {
 }
 
 void onTouchMove(float x, float y) {
-    std::lock_guard<std::mutex> lock(g_renderer_mutex);
     if (g_renderer && g_renderer->getInteractor()) {
         g_renderer->getInteractor()->onMouseMove(x, y);
     }
 }
 
 void onTouchUp(float x, float y) {
-    std::lock_guard<std::mutex> lock(g_renderer_mutex);
     if (g_renderer && g_renderer->getInteractor()) {
         g_renderer->getInteractor()->onMouseUp();
     }
 }
 
 void onScroll(float delta) {
-    std::lock_guard<std::mutex> lock(g_renderer_mutex);
     if (g_renderer && g_renderer->getInteractor()) {
         g_renderer->getInteractor()->onMouseScroll(delta);
     }
@@ -92,50 +87,26 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
     }
 }
 
-// 停止渲染
+// 停止渲染（单线程版本）
 void stopRender() {
-    if (g_is_rendering) {
-        g_is_rendering = false;
-        
-        if (g_render_thread.joinable()) {
-            g_render_thread.join();
-        }
-        
-        std::lock_guard<std::mutex> lock(g_renderer_mutex);
-        if (g_renderer) {
-            delete g_renderer;
-            g_renderer = nullptr;
-        }
+    g_is_rendering = false;
+    
+    if (g_renderer) {
+        delete g_renderer;
+        g_renderer = nullptr;
     }
 }
 
-// 开始渲染
+// 开始渲染（单线程版本）
 void startRender(const std::string& modelDir, int width, int height) {
     if (g_is_rendering) {
-        stopRender();
+        return;
     }
 
     g_is_rendering = true;
-
-    g_render_thread = std::thread([=]() {
-        ModelRenderer* local_renderer = new ModelRenderer(g_window, modelDir, width, height);
-        {
-            std::lock_guard<std::mutex> lock(g_renderer_mutex);
-            g_renderer = local_renderer;
-        }
-
-        while (g_is_rendering && !glfwWindowShouldClose(g_window)) {
-            local_renderer->draw();
-            std::this_thread::sleep_for(std::chrono::milliseconds(16));
-        }
-
-        // 清理渲染器
-        std::lock_guard<std::mutex> lock(g_renderer_mutex);
-        if (g_renderer == local_renderer) {
-            g_renderer = nullptr;
-        }
-        delete local_renderer;
-    });
+    
+    // 直接创建渲染器
+    g_renderer = new ModelRenderer(g_window, modelDir, width, height);
 }
 
 // 初始化GLFW和GLAD
@@ -152,7 +123,7 @@ bool initGLFW() {
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 
     // 创建窗口
-    g_window = glfwCreateWindow(800, 600, "3D Model Viewer", nullptr, nullptr);
+    g_window = glfwCreateWindow(800, 600, "Wind Engine", nullptr, nullptr);
     if (!g_window) {
         std::cerr << "Failed to create GLFW window" << std::endl;
         glfwTerminate();
@@ -222,11 +193,16 @@ int main(int argc, char *argv[]) {
     // 开始渲染
     startRender(modelDir, width, height);
 
-    // 主循环
-    while (!glfwWindowShouldClose(g_window)) {
+    // 主循环 - 单线程渲染
+    while (!glfwWindowShouldClose(g_window) && g_is_rendering) {
         glfwPollEvents();
         
-        // 渲染在另一个线程中进行
+        // 渲染场景
+        if (g_renderer) {
+            g_renderer->draw();
+        }
+        
+        // 控制帧率（约60fps）
         std::this_thread::sleep_for(std::chrono::milliseconds(16));
     }
 
