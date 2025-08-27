@@ -28,8 +28,53 @@ find_package(OpenGL REQUIRED)
 # Set GLFW as static library
 set(GLFW_BUILD_SHARED_LIBS OFF)
 
+# Find Python for GLSL conversion
+find_package(Python3 COMPONENTS Interpreter REQUIRED)
+
+# Define GLSL shader files and their outputs
+set(SHADER_DIR "${CMAKE_SOURCE_DIR}/EGL_Component/Component_Shader_Blinn_Phong")
+set(GLSL_CONVERTER "${SHADER_DIR}/Convert_GLSL_to_h.py")
+
+# Define shader files to convert
+set(SHADER_FILES
+    "${SHADER_DIR}/wind.vert.glsl"
+    "${SHADER_DIR}/wind.frag.glsl"
+)
+
+# Generate header files for each shader
+set(GENERATED_HEADERS)
+
+foreach(SHADER_FILE ${SHADER_FILES})
+    # Get the full filename without path and extension
+    get_filename_component(SHADER_BASENAME ${SHADER_FILE} NAME)
+    # Remove the .glsl extension to get the proper name (e.g., wind.vert, wind.frag)
+    string(REGEX REPLACE "\\.glsl$" "" SHADER_NAME "${SHADER_BASENAME}")
+    set(HEADER_FILE "${SHADER_DIR}/${SHADER_NAME}.h")
+    
+    # Add to list
+    list(APPEND GENERATED_HEADERS ${HEADER_FILE})
+    
+    # Create custom command to generate header file
+    add_custom_command(
+        OUTPUT ${HEADER_FILE}
+        COMMAND ${Python3_EXECUTABLE} ${GLSL_CONVERTER} ${SHADER_FILE} ${HEADER_FILE}
+        DEPENDS ${SHADER_FILE} ${GLSL_CONVERTER}
+        COMMENT "Converting ${SHADER_FILE} to C++ header"
+        VERBATIM
+    )
+endforeach()
+
+# Create a custom target for shader generation
+add_custom_target(generate_shaders
+    DEPENDS ${GENERATED_HEADERS}
+    COMMENT "Generating all shader header files"
+)
+
 # Add EGL_Component library
 add_subdirectory(EGL_Component)
+
+# Make sure shaders are generated before building EGL_Component
+add_dependencies(EGL_Component generate_shaders)
 
 # Create executable
 add_executable(${PROJECT_NAME} main.cpp)

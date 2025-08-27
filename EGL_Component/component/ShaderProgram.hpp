@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "macros.h"
 #include "glm/glm.hpp"
