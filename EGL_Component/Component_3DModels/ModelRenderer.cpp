@@ -119,7 +119,7 @@ void ModelRenderer::initGLES(const std::string& modelDir) {
     }
     // 模型未完全载入时显示的OpenGL绘制的画面
     mLoadingViewProgram = std::make_unique<LoadingViewClass>();
-    // mSkybox = std::make_unique<Skybox>(modelDir);
+     mSkybox = std::make_unique<Skybox>(modelDir);
 
     // 开启混合 透明度
     glEnable(GL_BLEND);
@@ -209,9 +209,15 @@ void ModelRenderer::draw() {
         // 初始化额外纹理管理器
         m_textureManager = &GlobalTextureManager::getInstance();
         m_textureManager->initialize();
-        // m_textureManager->loadTexture( m_modelDir + "/headtailmask.jpg“,  "grass", false );   // 加载纹理
-        m_textureManager->loadTexture( m_modelDir + "/headtailmask.jpg", "cpp_vertexMovementTexture", false );  // unordered_map 在这个单例中创建 cpp_vertexMovementTexture 这个id 与 这个.jpg文件的唯一关联
-        m_textureManager->bindToShader( "cpp_vertexMovementTexture", mProgram->getProgramId(), "vertexMovementTexture" );   // 绑定纹理到Shader // 绑定之后还需要在循环中激活
+        bool _flag_texture = false;
+        _flag_texture = m_textureManager->loadTexture( m_modelDir + "/headtailmask.jpg", "cpp_vertexMovementTexture", false );  // unordered_map 在这个单例中创建 cpp_vertexMovementTexture 这个id 与 这个.jpg文件的唯一关联
+        if (_flag_texture) { LOGI("Load texture success"); }
+        else { LOGE("Load texture failed"); }
+
+        _flag_texture = m_textureManager->bindToShader( "cpp_vertexMovementTexture", mProgram->getProgramId(), "vertexMovementTexture" );   // 绑定纹理到Shader // 绑定之后还需要在循环中激活
+        if (_flag_texture) { LOGI("Load texture success"); }
+        else { LOGE("Load texture failed"); }
+        // [ERROR][GlobalTextureManager] Uniform not found in shader : vertexMovementTexture
     }
 
     if ( mCamera ) {
@@ -300,7 +306,7 @@ void ModelRenderer::draw() {
     // 绘制3D场景 + 当后台线程加载完模型之后再绘制
     if ( mIsModelLoaded && mModel ) {
         // 绘制天空盒
-        // mSkybox->Draw( viewMatrix, m_projectionMatrix );
+        mSkybox->Draw( viewMatrix, m_projectionMatrix );
 
         // 帧数统计
         static int frameCount = 0;

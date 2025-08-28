@@ -1,4 +1,4 @@
-#version 460 core
+﻿#version 460 core
 
 // 添加必要的扩展以确保兼容性
 #extension GL_ARB_separate_shader_objects : enable
@@ -61,8 +61,8 @@ void main() {
 
     // 计算X轴位置因子 模型从X=0延伸至X正方形
     float xPositionFactor = modelPos.x / ( uBoundsMax.x - uBoundsMin.x);
+    xPositionFactor = abs( xPositionFactor );
     xPositionFactor = clamp( xPositionFactor, 0.0, 1.0 );
-
     // 基于X轴位置确定渐变强度: x轴坐标越大  振动越强
     float distanceAmplifier = mix( 0.1, 1.0, xPositionFactor );
     

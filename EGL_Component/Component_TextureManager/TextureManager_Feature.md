@@ -1,4 +1,4 @@
-# GlobalTextureManager 功能特性文档
+﻿# GlobalTextureManager 功能特性文档
 
 ## 基本信息
 - **创建日期**: 2025-01-11

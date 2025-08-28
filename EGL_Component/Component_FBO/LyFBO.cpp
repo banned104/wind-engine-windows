@@ -39,14 +39,31 @@ LyFBO::LyFBO(int width, int height, GLint internalFormat, GLenum format, GLenum 
     GLES_CHECK_ERROR(glBindRenderbuffer(GL_RENDERBUFFER, 0));
 }
 
+// LyFBO::~LyFBO()
+// {
+// 	GLES_CHECK_ERROR(glDeleteFramebuffers(1, &fbo));
+// 	GLES_CHECK_ERROR(glDeleteRenderbuffers(1, &rbo));
+// 	GLES_CHECK_ERROR(glDeleteTextures(1, &tex));
+// 	fbo = 0;
+//     rbo = 0;
+//     tex = 0;
+// }
 LyFBO::~LyFBO()
 {
-	GLES_CHECK_ERROR(glDeleteFramebuffers(1, &fbo));
-	GLES_CHECK_ERROR(glDeleteRenderbuffers(1, &rbo));
-	GLES_CHECK_ERROR(glDeleteTextures(1, &tex));
-	fbo = 0;
-    rbo = 0;
-    tex = 0;
+    if( glfwGetCurrentContext() != nullptr ) {
+        if ( fbo ) {
+            GLES_CHECK_ERROR(glDeleteFramebuffers(1, &fbo));
+            fbo = 0;
+        }
+        if ( rbo ) {
+            GLES_CHECK_ERROR(glDeleteRenderbuffers(1, &rbo));
+            rbo = 0;
+        }
+        if ( tex != 0 ) {
+            glDeleteTextures( 1, &tex );
+            tex = 0;
+        }
+    }
 }
 
 void LyFBO::

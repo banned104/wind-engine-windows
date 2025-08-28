@@ -1,4 +1,4 @@
-
+﻿
 #include "IntFBO.hpp"
 #include "macros.h"
 
@@ -64,14 +64,38 @@ IntFBO::IntFBO(int width, int height, GLint internalFormat, GLenum format, GLenu
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
+
+// 错误❌
+//IntFBO::~IntFBO()
+//{
+//	GLES_CHECK_ERROR(glDeleteFramebuffers(1, &fbo));
+//	GLES_CHECK_ERROR(glDeleteRenderbuffers(1, &rbo));
+//	GLES_CHECK_ERROR(glDeleteTextures(1, &tex));
+//	fbo = 0;
+//    rbo = 0;
+//    tex = 0;
+//}
+
 IntFBO::~IntFBO()
 {
-	GLES_CHECK_ERROR(glDeleteFramebuffers(1, &fbo));
-	GLES_CHECK_ERROR(glDeleteRenderbuffers(1, &rbo));
-	GLES_CHECK_ERROR(glDeleteTextures(1, &tex));
-	fbo = 0;
-    rbo = 0;
-    tex = 0;
+    // 检查当前是否有有效的OpenGL上下文
+    if (glfwGetCurrentContext() != nullptr) {
+        // 检查OpenGL对象是否有效再删除
+        if (fbo != 0) {
+            glDeleteFramebuffers(1, &fbo);
+            fbo = 0;
+        }
+
+        if (rbo != 0) {
+            glDeleteRenderbuffers(1, &rbo);
+            rbo = 0;
+        }
+
+        if (tex != 0) {
+            glDeleteTextures(1, &tex);
+            tex = 0;
+        }
+    }
 }
 
 void IntFBO::bind()
