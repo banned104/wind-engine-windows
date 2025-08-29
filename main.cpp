@@ -124,7 +124,7 @@ bool initGLFW() {
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 
     // 创建窗口
-    g_window = glfwCreateWindow(800, 600, "Wind Engine", nullptr, nullptr);
+    g_window = glfwCreateWindow(1920, 1080, "Wind Engine", nullptr, nullptr);
     if (!g_window) {
         std::cerr << "Failed to create GLFW window" << std::endl;
         glfwTerminate();

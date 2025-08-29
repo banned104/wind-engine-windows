@@ -97,9 +97,23 @@ void main() {
     
     // 合成最终的Y轴偏移
     float totalWaveY = ( waveY_primary + waveY_secondary + waveY_detail ) * waveAmplitudeY;
+
+
+    // 振动系数 使用纹理规划 单通道强度
+    // vec2 rotateTexCoords = vec2( TexCoords.y, TexCoords.x );
+    // vec4 waveColor = texture2D( vertexMovementTexture, rotateTexCoords );
+    // float waveFromTexture = 1.0 - ( waveColor.r + waveColor.g + waveColor.b )/3.0;
+    // totalWaveY *= waveFromTexture;
+    /*
+    const float  waveThresh = 0.3;      // 振动改变的位置
+    const float waveSoftness = 0.02;    // 过渡的缓冲区域大小
+    float mask = smoothstep( waveThresh - waveSoftness, waveThresh + waveSoftness,  )
+    */
     
     // 只在Y轴方向应用振动
     FragPos.y += totalWaveY;
+
+
 
     ColorFromVertex = aColor;
     InstanceID = aInstanceId;

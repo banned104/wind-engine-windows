@@ -30,6 +30,7 @@
 #include "CommonTypes.hpp"
 
 #include "SkyBox.hpp"
+#include "axis_helper.hpp"
 
 #ifdef ENABLE_INSTANCING
 #include "FlexableTouchPad_Instancing.hpp"
@@ -99,6 +100,9 @@ private:
 
     // 天空盒
     std::unique_ptr<Skybox> mSkybox;
+
+    // 坐标轴
+    std::unique_ptr<AxisRenderer> mAxis;
 
     
     std::unique_ptr<Camera> mCamera;

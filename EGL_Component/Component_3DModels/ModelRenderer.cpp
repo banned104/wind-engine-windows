@@ -119,7 +119,14 @@ void ModelRenderer::initGLES(const std::string& modelDir) {
     }
     // 模型未完全载入时显示的OpenGL绘制的画面
     mLoadingViewProgram = std::make_unique<LoadingViewClass>();
-     mSkybox = std::make_unique<Skybox>(modelDir);
+    mSkybox = std::make_unique<Skybox>(modelDir);
+
+    // 初始化坐标轴 AxisHelper
+    AxisRenderer::Config axisConfig;
+    axisConfig.length = m_modelDepth * 0.1f;        // 使用0.1 而不是 0.8的原因是 线段渲染 线段有一个顶点在视锥体外 整条线段就会被裁剪
+    axisConfig.depthTest = false;
+    mAxis = std::make_unique<AxisRenderer>( axisConfig );
+    
 
     // 开启混合 透明度
     glEnable(GL_BLEND);
@@ -207,6 +214,10 @@ void ModelRenderer::draw() {
 
         
         // 初始化额外纹理管理器
+        /*
+            [ERROR][GlobalTextureManager] Uniform not found in shader : vertexMovementTexture
+            出现这个ERROR的原因是: Shader编译时优化了未使用的变量导致找不到;
+        */
         m_textureManager = &GlobalTextureManager::getInstance();
         m_textureManager->initialize();
         bool _flag_texture = false;
@@ -217,7 +228,7 @@ void ModelRenderer::draw() {
         _flag_texture = m_textureManager->bindToShader( "cpp_vertexMovementTexture", mProgram->getProgramId(), "vertexMovementTexture" );   // 绑定纹理到Shader // 绑定之后还需要在循环中激活
         if (_flag_texture) { LOGI("Load texture success"); }
         else { LOGE("Load texture failed"); }
-        // [ERROR][GlobalTextureManager] Uniform not found in shader : vertexMovementTexture
+        
     }
 
     if ( mCamera ) {
@@ -306,7 +317,18 @@ void ModelRenderer::draw() {
     // 绘制3D场景 + 当后台线程加载完模型之后再绘制
     if ( mIsModelLoaded && mModel ) {
         // 绘制天空盒
+        GLint depthFunc;
+        GLboolean depthMask;
+        glGetIntegerv(GL_DEPTH_FUNC, &depthFunc);
+        glGetBooleanv(GL_DEPTH_WRITEMASK, &depthMask);
+        // 保存原始视图矩阵
+        glm::mat4 originalView = viewMatrix;
         mSkybox->Draw( viewMatrix, m_projectionMatrix );
+        glDepthMask(depthMask);
+        glDepthFunc(depthFunc);
+        glUseProgram(0);    // 需要解绑着色器程序 防止天空盒着色器污染Axis着色器
+        glBindTexture( GL_TEXTURE_CUBE_MAP, 0 );        // 解绑立方体贴图
+        viewMatrix = originalView;                      // 恢复视图矩阵
 
         // 帧数统计
         static int frameCount = 0;
@@ -389,6 +411,11 @@ void ModelRenderer::draw() {
         glDepthMask(GL_TRUE);       // 绘制结束恢复深度写入
         #endif
 
+        // 绘制坐标轴
+        glDisable( GL_DEPTH_TEST );
+        mAxis->render(viewMatrix, m_projectionMatrix);
+        glEnable( GL_DEPTH_TEST );
+
 
         // 绘制包围盒
         if (mShowBoundingBox && mBoundingBoxRenderer && mModel) {
@@ -414,6 +441,8 @@ void ModelRenderer::draw() {
             }
             #endif
         }
+
+
 
 
     } else {
