@@ -74,15 +74,21 @@ private:
             // 将顶点位置和法线变换到世界空间
             FragPos = vec3(aInstanceMatrix * vec4(aPos, 1.0));
 
-            // 应用每个实例的独立偏移
-            int instanceIndex = int(aInstanceId) - 1;  // 实例ID从1开始，数组索引从0开始
-            if (instanceIndex >= 0 && instanceIndex < INSTANCES_COUNT) {
-                // 使用该实例的独立偏移
-                vec4 movementData = texture( vertexMovementTexture, TexCoords );
-                float movementFactor = (movementData.r + movementData.g + movementData.b) * 0.33333333;
-                FragPos.x += InstanceOffset[instanceIndex].x * movementFactor;
-                FragPos.y -= InstanceOffset[instanceIndex].y * movementFactor;  // Y轴方向相反
-            }
+            // // 应用每个实例的独立偏移
+            // int instanceIndex = int(aInstanceId) - 1;  // 实例ID从1开始，数组索引从0开始
+            // if (instanceIndex >= 0 && instanceIndex < INSTANCES_COUNT) {
+            //     // 使用该实例的独立偏移
+            //     vec4 movementData = texture( vertexMovementTexture, TexCoords );
+            //     float movementFactor = (movementData.r + movementData.g + movementData.b) * 0.33333333;
+            //     FragPos.x += InstanceOffset[instanceIndex].x * movementFactor;
+            //     FragPos.y -= InstanceOffset[instanceIndex].y * movementFactor;  // Y轴方向相反
+            // }
+                // 应用每个实例的独立偏移
+                int instanceIndex = int(aInstanceId) - 1;
+                if (instanceIndex >= 0 && instanceIndex < 4) {
+                    FragPos.x += InstanceOffset[instanceIndex].x  * TexCoords.x;
+                    FragPos.y -= InstanceOffset[instanceIndex].y  * TexCoords.x;
+                }
 
             gl_Position = projMatrix * viewMatrix * vec4(FragPos, 1.0);
         }
