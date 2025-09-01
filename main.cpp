@@ -115,7 +115,7 @@ bool initGLFW() {
         std::cerr << "Failed to initialize GLFW" << std::endl;
         return false;
     }
-
+    glfwSwapInterval(1);  // 禁用VSync
     // 设置OpenGL版本和配置
     // 在initGLFW()函数中，确保设置正确的OpenGL版本
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
@@ -204,7 +204,7 @@ int main(int argc, char *argv[]) {
         }
         
         // 控制帧率（约60fps）
-        std::this_thread::sleep_for(std::chrono::milliseconds(16));
+        //std::this_thread::sleep_for(std::chrono::milliseconds(16));
     }
 
     // 清理资源

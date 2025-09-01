@@ -301,8 +301,8 @@ void ModelRenderer::draw() {
         m_lastPickedID = pickedID;
         m_cameraInteractor->mPickedID = pickedID;
 
-        if (pickedID == -1) {
-            LOGI("Picked background (no model at position)");
+        if (pickedID == BACKGROUND_ID) {
+            LOGI("Picked background (no model at position) %d", pickedID );
         } else if (pickedID > 0) {
             LOGI("Picked model with ID: %d", pickedID);
             // 不再在这里设置deltaX和deltaY，这些值现在由回调函数控制

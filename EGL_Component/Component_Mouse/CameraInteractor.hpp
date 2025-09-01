@@ -5,7 +5,9 @@
 #include <glm/glm.hpp>
 #include <stdexcept>
 #include <functional>
-#include "CameraInteractor.hpp"
+
+// 定义背景ID常量，与ModelRenderer.hpp保持一致
+#define BACKGROUND_ID 0
 
 struct WindUBO;
 

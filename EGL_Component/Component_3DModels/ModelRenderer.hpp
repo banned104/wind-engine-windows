@@ -7,6 +7,8 @@
 // 模型编号 之后会拓展加载多个实例
 #define RENDER_GLOBAL_MODEL_INSTANCE_ID 3
 
+// ColorPick功能中的背景ID
+#define BACKGROUND_ID 0
 
 #include <string>
 #include <memory>
@@ -122,13 +124,10 @@ private:
         m_cameraInteractor->onMouseDown(x, y, CameraInteractor::MouseButton::Left);
     }
 
-    // void on_touch_move(float x, float y) {
-    //     m_cameraInteractor->onMouseMove(x, y);
-    // }
 
     void on_touch_move(float x, float y) {
         // 如果触摸的是背景，则控制相机移动
-        if (m_lastPickedID == -1) {
+        if (m_lastPickedID == BACKGROUND_ID ) {
             m_cameraInteractor->onMouseMove(x, y);
         } else {
             // 如果触摸的是模型，则修改UBO参数实现拖拽功能
@@ -152,7 +151,7 @@ private:
         m_cameraInteractor->onMouseUp();
 
         // 重置拾取ID
-        m_lastPickedID = -1;
+        m_lastPickedID = BACKGROUND_ID;
     }
 
     void on_scroll(float delta) {
@@ -169,7 +168,7 @@ private:
     std::vector<InstanceData> render_instance_data;
 
     // 触摸相关
-    int m_lastPickedID = -1;        // 跟踪最后一次拾取的模型
+    int m_lastPickedID = BACKGROUND_ID;        // 跟踪最后一次拾取的模型
     ModelProgram::WindUBO m_ubo;    // 存储当前UBO参数
 
     // 每个实例的独立偏移状态

@@ -1,4 +1,4 @@
-﻿#include "CameraInteractor.hpp"
+#include "CameraInteractor.hpp"
 
 #include "macros.h"
 #include "corecrt_math_defines.h"
@@ -23,7 +23,7 @@ void CameraInteractor::onMouseUp() {
 
     // 不再重置实例偏移，让每个实例保持在最后被移动到的位置
     // 只清除选中状态，但不重置偏移值
-    mPickedID = -1;  // 清除选中状态
+    mPickedID = BACKGROUND_ID;  // 重置为背景ID
 }
 
 void CameraInteractor::onMouseMove(float x, float y) {
@@ -38,7 +38,7 @@ void CameraInteractor::onMouseMove(float x, float y) {
     switch (m_activeButton) {
         case MouseButton::Left:
             // 左键拖拽 -> 轨道旋转或实例移动
-            if ( mPickedID == -1 ) {
+            if ( mPickedID == BACKGROUND_ID ) {
                 // 没有选中实例，执行相机轨道旋转
                 m_camera->orbit(-delta.x, delta.y);
             } else {
@@ -52,7 +52,7 @@ void CameraInteractor::onMouseMove(float x, float y) {
         case MouseButton::Right:
         case MouseButton::Middle:
             // 右键或中键拖拽 -> 平移
-            if ( mPickedID == -1 )
+            if ( mPickedID == BACKGROUND_ID )
             {m_camera->pan(delta.x, delta.y);}
             break;
 

@@ -85,7 +85,8 @@ public:
 
         // --- 3. 执行拾取绘制 ---
         // 清空FBO，背景ID为0
-        GLuint clearColor = 0xFFFFFFFFu;
+        // GLuint clearColor = 0xFFFFFFFFu;
+        GLuint clearColor = 0u;
         glClearBufferuiv(GL_COLOR, 0, &clearColor);
         glClearBufferfi(GL_DEPTH_STENCIL, 0, 1.0f, 0);
         
