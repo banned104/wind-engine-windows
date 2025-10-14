@@ -138,340 +138,40 @@ void ModelRenderer::initGLES(const std::string& modelDir) {
 }
 
 void ModelRenderer::draw() {
+    // ========== 早期返回检查 ==========
     if (!mIsInitialized || !mOffscreenRenderer) {
-        // 显示加载界面或错误信息
         return;
     }
     
-    // * 若模型太大会出现白屏问题, 此处用于显示加载界面或者什么都不做( 仅显示透明 )
-    if (!mIsModelLoaded) { 
-        LOGI("Renderer not initialized, Loading view is presenting.");
-        mOffscreenRenderer->beginFrame(); // 准备FBO
-        // glClearColor( 0.1f, 0.2f, 0.3f, 1.0f );
-
-        mLoadingViewProgram->use();
-        // mLoadingViewProgram->updataGlobals()
-        mLoadingViewProgram->draw();
-
-        mOffscreenRenderer->endFrame();   // 解析FBO
-        mOffscreenRenderer->drawToScreen(); // 将结果绘制到屏幕
-        glfwSwapBuffers(mWindow);
+    // 显示加载界面（模型未加载完成时）
+    if (!mIsModelLoaded) {
+        drawLoadingView();
         return;
-    } 
-
-    if ( mIsFirstDrawAfterModelLoaded ) {
-        mIsFirstDrawAfterModelLoaded = false;
-
-        LOGI("std::chrono::high_resolution_clock::now(); mIsFirstDrawAfterModelLoaded, used:%lld ms", 
-        std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::high_resolution_clock::now() - startTime ).count()
-        );
-
-        // ! 在主线程中将数据从RAM搬到GPU RAM  子线程没有 OpenGL Context
-        mModel->uploadToGPU();
-
-        mCamera = std::make_unique<Camera>();
-        // 初始化坐标轴 AxisHelper
-        AxisRenderer::Config axisConfig;
-        axisConfig.length = m_modelDepth * 0.1f;        // 使用0.1 而不是 0.8的原因是 线段渲染 线段有一个顶点在视锥体外 整条线段就会被裁剪
-        axisConfig.depthTest = false;
-        mAxis = std::make_unique<AxisRenderer>( axisConfig );
-        
-        // 传递相机指针给CameraInterator
-        m_cameraInteractor = std::make_unique<CameraInteractor>(mCamera.get());
-
-        m_modelCenter = ( mModel->boundsMin() + mModel->boundsMax() ) *0.5f;
-        m_modelDepth = glm::length( mModel->boundsMax() - mModel->boundsMin() );
-        mCamera->setTarget( glm::vec3( 0.0, 0.0, 0.0 ) );
-        mCamera->setDistance( m_modelDepth * 0.7f );      // 根据模型大小设置一个合适的初始距离
-        std::cout << "Distance:" << m_modelDepth << std::endl;
-        // PhongModelProgram.hpp 中类的名字也是ModelProgram 要切换Shader 只需要改变包含的 .hpp 文件即可
-        mProgram = std::make_unique<ModelProgram>();
-
-        glEnable(GL_DEPTH_TEST);
-        LOGI("GLES Initialized for model rendering.");
-
-        // 在 glProgramLink 方法执行之后运行获取 Shader中变量位置并保存至缓存中的方法
-        mProgram->cacheUniformLocations();
-
-        // 立即初始化UBO数据，避免使用未初始化的数据
-        m_ubo = {}; // 零初始化所有字段
-        m_ubo.proj = glm::mat4(1.0f);
-        m_ubo.view = glm::mat4(1.0f);
-        m_ubo.model = glm::mat4(1.0f);
-        m_ubo.time = 0.0f;
-        m_ubo.waveAmp = 1.0f;
-        m_ubo.waveSpeed = 5.0f;
-        m_ubo.pickedInstanceID = -1;  // 使用-1表示没有选中任何实例
-        m_ubo.color = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
-        m_ubo.deltaX = 0.0f;
-        m_ubo.deltaY = 0.0f;
-        // 初始化实例偏移数组
-        for (int i = 0; i < INSTANCES_COUNT; i++) {
-            m_ubo.instanceOffsets[i] = m_instanceOffsets[i];
-        }
-        // 立即更新到GPU
-        mProgram->updateGlobals(m_ubo);
-
-        // 投影矩阵
-        float aspect = static_cast<float>(mWidth) / static_cast<float>(mHeight);
-        //m_projectionMatrix = glm::perspective(glm::radians(45.0f), aspect, 0.1f, m_modelDepth * 20.0f);
-        m_projectionMatrix = glm::perspective(glm::radians(45.0f), aspect, 0.1f, m_modelDepth * 20.0f);
-        
-        // 4. 初始化包围盒渲染器
-        mBoundingBoxRenderer = std::make_unique<BoundingBoxRenderer>();
-        if (!mBoundingBoxRenderer->initialize()) {
-            LOGE("Failed to initialize BoundingBoxRenderer");
-            mBoundingBoxRenderer.reset();
-        } else {
-            LOGI("BoundingBoxRenderer initialized successfully");
-        }
-
-        // 实例化初始化
-        constexpr int instance_count = INSTANCES_COUNT;
-        // std::vector<InstanceData> render_instance_data( instance_count );
-        render_instance_data.resize( instance_count );
-        generateInstanceData( render_instance_data, instance_count );
-        mModel->setupInstances( render_instance_data );
-        LOGI("Instances data generated.");
-
-        
-        // 初始化额外纹理管理器
-        /*
-            [ERROR][GlobalTextureManager] Uniform not found in shader : vertexMovementTexture
-            出现这个ERROR的原因是: Shader编译时优化了未使用的变量导致找不到;
-        */
-        m_textureManager = &GlobalTextureManager::getInstance();
-        m_textureManager->initialize();
-        bool _flag_texture = false;
-        _flag_texture = m_textureManager->loadTexture( m_modelDir + "/headtailmask.jpg", "cpp_vertexMovementTexture", false );  // unordered_map 在这个单例中创建 cpp_vertexMovementTexture 这个id 与 这个.jpg文件的唯一关联
-        if (_flag_texture) { LOGI("Load texture success"); }
-        else { LOGE("(Headtailmask)Load texture failed"); }
-
-        _flag_texture = m_textureManager->bindToShader( "cpp_vertexMovementTexture", mProgram->getProgramId(), "vertexMovementTexture" );   // 绑定纹理到Shader // 绑定之后还需要在循环中激活
-        if (_flag_texture) { LOGI("Load texture success"); }
-        else { LOGE("(vertexmovement)Load texture failed"); }
-        
     }
 
-    if ( mCamera ) {
-        static auto lastTime = std::chrono::high_resolution_clock::now();
-        auto currentTime = std::chrono::high_resolution_clock::now();
-        float deltaTime = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - lastTime).count();
-        lastTime = currentTime;
-        mCamera->update(deltaTime);
-    }
-
-    // ! TouchPad 初始化
-    if ( mIsFirstTouchPadLoaded ) {
-        mIsFirstTouchPadLoaded = false;
-        try {
-            m_globals = std::make_unique<Globals>();
-            m_globals->id = RENDER_GLOBAL_MODEL_INSTANCE_ID;
-            m_touchPad = std::make_unique<FlexableTouchPadClass>(
-                mWidth, mHeight,
-                *m_globals,
-                *mModel,
-                *mCamera,
-                *m_cameraInteractor
-            );
-        } catch (const std::runtime_error& e) {
-            LOGE("Error creating FlexableTouchPad: %s", e.what());
-            // 在这里可以添 加更多的错误处理逻辑，比如禁用触摸功能
-        }
-        m_cameraInteractor->setOnMoveCallbackFunction( [&](float deltaX, float deltaY) {
-            // 如果deltaX和deltaY都为0，说明是重置操作，但我们不再重置
-            // 现在每个实例保持独立的偏移状态
-            if (deltaX != 0.0f || deltaY != 0.0f) {
-                // 只更新当前选中实例的偏移
-                if (m_lastPickedID > 0 && m_lastPickedID <= INSTANCES_COUNT) {
-                    int instanceIndex = m_lastPickedID - 1;  // 实例ID从1开始，数组索引从0开始
-                    m_instanceOffsets[instanceIndex].deltaX += deltaX * 0.01f;
-                    m_instanceOffsets[instanceIndex].deltaY += deltaY * 0.01f;
-
-                    // 更新UBO中的实例偏移数组
-                    for (int i = 0; i < INSTANCES_COUNT; i++) {
-                        m_ubo.instanceOffsets[i] = m_instanceOffsets[i];
-                    }
-                    // 更新FlexablePad的位置和形变
-                    m_touchPad->updatePadGlobalInstanceOffsetArray( m_instanceOffsets );
-                }
-            }
-        } );
-    }
+    // ========== 一次性初始化 ==========
+    performFirstTimeInitialization();
+    updateCameraIfNeeded();
+    initializeTouchPadIfNeeded();
     
-    // 1. 计算 MVP 矩阵
-    glm::mat4 modelMatrix = glm::mat4(1);
-    // 视图矩阵
+    // ========== 每帧计算和更新 ==========
+    glm::mat4 modelMatrix = glm::mat4(1.0f);
     glm::mat4 viewMatrix = mCamera->getViewMatrix();
+    
+    // 执行拾取操作（如果需要）
+    performPickingIfRequested(modelMatrix, viewMatrix);
 
-    if ((m_touchPad && m_pickRequested) || mIsFirstAutomaticPicking) {
-        m_pickRequested = false;
-        mIsFirstAutomaticPicking = false;
-
-        m_globals->modelMatrix = modelMatrix;
-        m_globals->viewMatrix = viewMatrix;
-        m_globals->projMatrix = mCamera->getProjectionMatrix();
-
-        #ifdef ENABLE_INSTANCING        // 这个宏在CMake中定义
-        // 在之前的初始化中已经传递 InstanceData 到mModel中, 这里touchpad 又获得了 mModel , 所以不需要再传递这个数据
-        // m_touchPad->getInstanceData( &render_instance_data );
-        int pickedID = m_touchPad->performPickingInstancing();
-        #else 
-        int pickedID = m_touchPad->performPicking();
-        #endif
-
-        // 保存拾取结果
-        m_lastPickedID = pickedID;
-        m_cameraInteractor->mPickedID = pickedID;
-
-        if (pickedID == BACKGROUND_ID) {
-            LOGI("Picked background (no model at position) %d", pickedID );
-        } else if (pickedID > 0) {
-            LOGI("Picked model with ID: %d", pickedID);
-            // 不再在这里设置deltaX和deltaY，这些值现在由回调函数控制
-        } else {
-            LOGI("Picked nothing pickID: %d", pickedID);
-        }
-        
-    }
-
-
-    mOffscreenRenderer->beginFrame(); // 准备FBO
-    // 绘制3D场景 + 当后台线程加载完模型之后再绘制
-    if ( mIsModelLoaded && mModel ) {
-        // 绘制天空盒
-        GLint depthFunc;
-        GLboolean depthMask;
-        glGetIntegerv(GL_DEPTH_FUNC, &depthFunc);
-        glGetBooleanv(GL_DEPTH_WRITEMASK, &depthMask);
-        // 保存原始视图矩阵
-        glm::mat4 originalView = viewMatrix;
-        mSkybox->Draw( viewMatrix, m_projectionMatrix );
-        glDepthMask(depthMask);
-        glDepthFunc(depthFunc);
-        glUseProgram(0);    // 需要解绑着色器程序 防止天空盒着色器污染Axis着色器
-        glBindTexture( GL_TEXTURE_CUBE_MAP, 0 );        // 解绑立方体贴图
-        viewMatrix = originalView;                      // 恢复视图矩阵
-
-        // 帧数统计
-        static int frameCount = 0;
-        frameCount++;
-        mProgram->use();
-
-        // 激活纹理单元
-        m_textureManager->activateTextures();
-
-        // todo 现在每一帧都更新MVP矩阵, 后续考虑优化
-        // 更新Shader中的 MVP 矩阵
-        // 优化：只在必要时更新UBO，减少GPU数据传输
-        static glm::mat4 lastProj, lastView, lastModel;
-        static float lastUboTime = -1.0f;
-
-        bool needUpdate = false;
-
-        glm::mat4 currentProj = mCamera->getProjectionMatrix();
-        glm::mat4 currentView = mCamera->getViewMatrix();
-
-        // 检查矩阵是否发生变化
-        if (lastProj != currentProj || lastView != currentView || lastModel != modelMatrix) {
-            needUpdate = true;
-            lastProj = currentProj;
-            lastView = currentView;
-            lastModel = modelMatrix;
-        }
-
-        m_ubo.proj = currentProj;
-        m_ubo.view = currentView;
-        m_ubo.model = modelMatrix;
-
-        // 动画参数 - 修复：确保时间连续平滑传递
-        static auto startTime = std::chrono::high_resolution_clock::now();
-        auto now = std::chrono::high_resolution_clock::now();
-        auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - startTime);
-
-        // 使用连续的时间值，确保流动效果平滑
-        float currentTime = elapsed.count() / 1000.0f;  // 转换为秒
-        float wrappedTime = fmod(currentTime, 10.0f);   // 每10秒循环一次
-
-        // 检查时间是否发生变化（用于优化UBO更新）
-        if (lastUboTime != wrappedTime) {
-            needUpdate = true;
-            lastUboTime = wrappedTime;
-        }
-
-        m_ubo.time = wrappedTime;
-        m_ubo.pickedInstanceID = m_lastPickedID;
-        
-        // 移除重复的UBO初始化，因为现在在mIsFirstDrawAfterModelLoaded中已经初始化过了
-        
-        if ( mModel ) {
-            m_ubo.boundMax = mModel->boundsMax();
-            m_ubo.boundMin = mModel-> boundsMin();
-            
-            // 第一次设置后立即更新边界信息
-            mProgram->updateGlobals(m_ubo);
-        }
-
-        // 只在有变化时更新UBO
-        if (needUpdate) {
-            mProgram->updateGlobals(m_ubo);
-        }
-
-
-        // 调用模型的 Draw 函数 绘制模型 之前加载到GPU RAM中的纹理会被调用
-        #ifndef ENABLE_INSTANCING
-        mModel->Draw(mProgram->getProgramId());
-        #else 
-        // mModel->DrawInstanced( mProgram->getProgramId(), INSTANCES_COUNT );
-        glEnable(GL_BLEND);
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-        glDepthMask(GL_FALSE);      // 绘制模型前禁用深度写入, 但是保持深度测试
-        mModel->DrawInstancedWind( mProgram->getProgramId(), INSTANCES_COUNT  );
-        glDepthMask(GL_TRUE);       // 绘制结束恢复深度写入
-        #endif
-
-        // 绘制坐标轴
-        glDisable( GL_DEPTH_TEST );
-        mAxis->render(viewMatrix, m_projectionMatrix);
-        glEnable( GL_DEPTH_TEST );
-
-
-        // 绘制包围盒
-        if (mShowBoundingBox && mBoundingBoxRenderer && mModel) {
-            glm::vec3 minBounds = mModel->boundsMin();
-            glm::vec3 maxBounds = mModel->boundsMax();
-            glm::vec3 boundingBoxColor(1.0f, 1.0f, 0.0f); // 黄色线框
-            
-            // 绘制全局模型的包围盒
-            glm::mat4 mvpMatrix = mCamera->getProjectionMatrix() * mCamera->getViewMatrix() * modelMatrix;
-            mBoundingBoxRenderer->drawBoundingBox(minBounds, maxBounds, mvpMatrix, boundingBoxColor);
-            
-            // 为每个实例绘制包围盒
-            #ifdef ENABLE_INSTANCING
-            for (int i = 0; i < INSTANCES_COUNT; i++) {
-                // 获取实例的模型矩阵
-                glm::mat4 instanceModelMatrix = render_instance_data[i].modelMatrix;
-                // 计算实例的MVP矩阵
-                glm::mat4 instanceMvpMatrix = mCamera->getProjectionMatrix() * mCamera->getViewMatrix() * instanceModelMatrix;
-                // 使用不同颜色区分不同实例的包围盒
-                glm::vec3 instanceColor(0.0f, 1.0f, 1.0f); // 青色
-                // 绘制实例的包围盒
-                mBoundingBoxRenderer->drawBoundingBox(minBounds, maxBounds, instanceMvpMatrix, instanceColor);
-            }
-            #endif
-        }
-
-
-
-
+    // ========== 主渲染流程 ==========
+    mOffscreenRenderer->beginFrame();
+    
+    if (mIsModelLoaded && mModel) {
+        renderScene(viewMatrix, modelMatrix);
     } else {
         LOGE("mModel is NOT set");
     }
 
-    mOffscreenRenderer->endFrame();   // 解析FBO
-    mOffscreenRenderer->drawToScreen(); // 将结果绘制到屏幕
-
-    // 交换缓冲区
+    mOffscreenRenderer->endFrame();
+    mOffscreenRenderer->drawToScreen();
     glfwSwapBuffers(mWindow);
 }
 
@@ -521,4 +221,338 @@ void  ModelRenderer::generateInstanceData( std::vector<InstanceData>& instanceDa
         // 设置实例ID
         instanceData[i].instanceId = i + 1;
     }
+}
+
+// ========== 私有辅助函数实现 ==========
+
+void ModelRenderer::drawLoadingView() {
+    LOGI("Renderer not initialized, Loading view is presenting.");
+    mOffscreenRenderer->beginFrame();
+    mLoadingViewProgram->use();
+    mLoadingViewProgram->draw();
+    mOffscreenRenderer->endFrame();
+    mOffscreenRenderer->drawToScreen();
+    glfwSwapBuffers(mWindow);
+}
+
+void ModelRenderer::performFirstTimeInitialization() {
+    if (!mIsFirstDrawAfterModelLoaded) return;
+    
+    mIsFirstDrawAfterModelLoaded = false;
+    LOGI("std::chrono::high_resolution_clock::now(); mIsFirstDrawAfterModelLoaded, used:%lld ms", 
+            std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - startTime).count());
+
+    // 将模型数据从RAM上传到GPU
+    mModel->uploadToGPU();
+
+    // 初始化相机系统
+    initializeCameraSystem();
+    
+    // 初始化渲染组件
+    initializeRenderingComponents();
+    
+    // 初始化实例化数据
+    initializeInstancedData();
+    
+    // 初始化纹理管理器
+    initializeTextureManager();
+}
+
+void ModelRenderer::initializeCameraSystem() {
+    mCamera = std::make_unique<Camera>();
+    m_cameraInteractor = std::make_unique<CameraInteractor>(mCamera.get());
+    
+    // 计算模型尺寸和设置相机
+    m_modelCenter = (mModel->boundsMin() + mModel->boundsMax()) * 0.5f;
+    m_modelDepth = glm::length(mModel->boundsMax() - mModel->boundsMin());
+    mCamera->setTarget(glm::vec3(0.0, 0.0, 0.0));
+    mCamera->setDistance(m_modelDepth * 0.7f);
+    std::cout << "Distance:" << m_modelDepth << std::endl;
+}
+
+void ModelRenderer::initializeRenderingComponents() {
+    // 创建Shader程序
+    mProgram = std::make_unique<ModelProgram>();
+    glEnable(GL_DEPTH_TEST);
+    LOGI("GLES Initialized for model rendering.");
+    
+    // 缓存Uniform位置
+    mProgram->cacheUniformLocations();
+    
+    // 初始化UBO数据
+    initializeUBOData();
+    
+    // 设置投影矩阵
+    float aspect = static_cast<float>(mWidth) / static_cast<float>(mHeight);
+    m_projectionMatrix = glm::perspective(glm::radians(45.0f), aspect, 0.1f, m_modelDepth * 20.0f);
+    
+    // 初始化坐标轴渲染器
+    AxisRenderer::Config axisConfig;
+    axisConfig.length = m_modelDepth * 0.1f;
+    axisConfig.depthTest = false;
+    mAxis = std::make_unique<AxisRenderer>(axisConfig);
+    
+    // 初始化包围盒渲染器
+    mBoundingBoxRenderer = std::make_unique<BoundingBoxRenderer>();
+    if (!mBoundingBoxRenderer->initialize()) {
+        LOGE("Failed to initialize BoundingBoxRenderer");
+        mBoundingBoxRenderer.reset();
+    } else {
+        LOGI("BoundingBoxRenderer initialized successfully");
+    }
+}
+
+void ModelRenderer::initializeUBOData() {
+    // 零初始化所有字段
+    m_ubo = {};
+    m_ubo.proj = glm::mat4(1.0f);
+    m_ubo.view = glm::mat4(1.0f);
+    m_ubo.model = glm::mat4(1.0f);
+    m_ubo.time = 0.0f;
+    m_ubo.waveAmp = 1.0f;
+    m_ubo.waveSpeed = 5.0f;
+    m_ubo.pickedInstanceID = -1;  // 使用-1表示没有选中任何实例
+    m_ubo.color = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
+    m_ubo.deltaX = 0.0f;
+    m_ubo.deltaY = 0.0f;
+    
+    // 初始化实例偏移数组
+    for (int i = 0; i < INSTANCES_COUNT; i++) {
+        m_ubo.instanceOffsets[i] = m_instanceOffsets[i];
+    }
+    
+    // 立即更新到GPU
+    mProgram->updateGlobals(m_ubo);
+}
+
+void ModelRenderer::initializeInstancedData() {
+    constexpr int instance_count = INSTANCES_COUNT;
+    render_instance_data.resize(instance_count);
+    generateInstanceData(render_instance_data, instance_count);
+    mModel->setupInstances(render_instance_data);
+    LOGI("Instances data generated.");
+}
+
+void ModelRenderer::initializeTextureManager() {
+    m_textureManager = &GlobalTextureManager::getInstance();
+    m_textureManager->initialize();
+    
+    bool flag_texture = m_textureManager->loadTexture(m_modelDir + "/headtailmask.jpg", "cpp_vertexMovementTexture", false);
+    if (flag_texture) {
+        LOGI("Load texture success");
+    } else {
+        LOGE("(Headtailmask)Load texture failed");
+    }
+    
+    flag_texture = m_textureManager->bindToShader("cpp_vertexMovementTexture", mProgram->getProgramId(), "vertexMovementTexture");
+    if (flag_texture) {
+        LOGI("Load texture success");
+    } else {
+        LOGE("(vertexmovement)Load texture failed");
+    }
+}
+
+void ModelRenderer::updateCameraIfNeeded() {
+    if (!mCamera) return;
+    
+    static auto lastTime = std::chrono::high_resolution_clock::now();
+    auto currentTime = std::chrono::high_resolution_clock::now();
+    float deltaTime = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - lastTime).count();
+    lastTime = currentTime;
+    mCamera->update(deltaTime);
+}
+
+void ModelRenderer::initializeTouchPadIfNeeded() {
+    if (!mIsFirstTouchPadLoaded) return;
+    
+    mIsFirstTouchPadLoaded = false;
+    try {
+        m_globals = std::make_unique<Globals>();
+        m_globals->id = RENDER_GLOBAL_MODEL_INSTANCE_ID;
+        m_touchPad = std::make_unique<FlexableTouchPadClass>(
+            mWidth, mHeight,
+            *m_globals,
+            *mModel,
+            *mCamera,
+            *m_cameraInteractor
+        );
+    } catch (const std::runtime_error& e) {
+        LOGE("Error creating FlexableTouchPad: %s", e.what());
+    }
+    
+    // 设置相机移动回调
+    m_cameraInteractor->setOnMoveCallbackFunction([&](float deltaX, float deltaY) {
+        if (deltaX != 0.0f || deltaY != 0.0f) {
+            if (m_lastPickedID > 0 && m_lastPickedID <= INSTANCES_COUNT) {
+                int instanceIndex = m_lastPickedID - 1;
+                m_instanceOffsets[instanceIndex].deltaX += deltaX * 0.01f;
+                m_instanceOffsets[instanceIndex].deltaY += deltaY * 0.01f;
+
+                for (int i = 0; i < INSTANCES_COUNT; i++) {
+                    m_ubo.instanceOffsets[i] = m_instanceOffsets[i];
+                }
+                m_touchPad->updatePadGlobalInstanceOffsetArray(m_instanceOffsets);
+            }
+        }
+    });
+}
+
+void ModelRenderer::performPickingIfRequested(const glm::mat4& modelMatrix, const glm::mat4& viewMatrix) {
+    if (!((m_touchPad && m_pickRequested) || mIsFirstAutomaticPicking)) return;
+    
+    m_pickRequested = false;
+    mIsFirstAutomaticPicking = false;
+
+    m_globals->modelMatrix = modelMatrix;
+    m_globals->viewMatrix = viewMatrix;
+    m_globals->projMatrix = mCamera->getProjectionMatrix();
+
+    #ifdef ENABLE_INSTANCING
+    int pickedID = m_touchPad->performPickingInstancing();
+    #else 
+    int pickedID = m_touchPad->performPicking();
+    #endif
+
+    m_lastPickedID = pickedID;
+    m_cameraInteractor->mPickedID = pickedID;
+
+    if (pickedID == BACKGROUND_ID) {
+        LOGI("Picked background (no model at position) %d", pickedID);
+    } else if (pickedID > 0) {
+        LOGI("Picked model with ID: %d", pickedID);
+    } else {
+        LOGI("Picked nothing pickID: %d", pickedID);
+    }
+}
+
+void ModelRenderer::renderScene(glm::mat4& viewMatrix, const glm::mat4& modelMatrix) {
+    // 渲染天空盒
+    renderSkybox(viewMatrix);
+    
+    // 设置模型渲染状态
+    setupModelRenderingState();
+    
+    // 更新UBO数据
+    updateUBOData(viewMatrix, modelMatrix);
+    
+    // 渲染模型
+    renderModel();
+    
+    // 渲染辅助元素
+    renderAuxiliaryElements(viewMatrix, modelMatrix);
+}
+
+void ModelRenderer::renderSkybox(glm::mat4& viewMatrix) {
+    GLint depthFunc;
+    GLboolean depthMask;
+    glGetIntegerv(GL_DEPTH_FUNC, &depthFunc);
+    glGetBooleanv(GL_DEPTH_WRITEMASK, &depthMask);
+    
+    glm::mat4 originalView = viewMatrix;
+    mSkybox->Draw(viewMatrix, m_projectionMatrix);
+    glDepthMask(depthMask);
+    glDepthFunc(depthFunc);
+    glUseProgram(0);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
+    viewMatrix = originalView;
+}
+
+void ModelRenderer::setupModelRenderingState() {
+    static int frameCount = 0;
+    frameCount++;
+    
+    mProgram->use();
+    m_textureManager->activateTextures();
+}
+
+void ModelRenderer::updateUBOData(const glm::mat4& viewMatrix, const glm::mat4& modelMatrix) {
+    static glm::mat4 lastProj, lastView, lastModel;
+    static float lastUboTime = -1.0f;
+    static auto startTime = std::chrono::high_resolution_clock::now();
+    
+    bool needUpdate = false;
+    
+    glm::mat4 currentProj = mCamera->getProjectionMatrix();
+    glm::mat4 currentView = mCamera->getViewMatrix();
+
+    // 检查矩阵变化
+    if (lastProj != currentProj || lastView != currentView || lastModel != modelMatrix) {
+        needUpdate = true;
+        lastProj = currentProj;
+        lastView = currentView;
+        lastModel = modelMatrix;
+    }
+
+    m_ubo.proj = currentProj;
+    m_ubo.view = currentView;
+    m_ubo.model = modelMatrix;
+
+    // 更新动画时间
+    auto now = std::chrono::high_resolution_clock::now();
+    auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - startTime);
+    float currentTime = elapsed.count() / 1000.0f;
+    float wrappedTime = fmod(currentTime, 10.0f);
+
+    if (lastUboTime != wrappedTime) {
+        needUpdate = true;
+        lastUboTime = wrappedTime;
+    }
+
+    m_ubo.time = wrappedTime;
+    m_ubo.pickedInstanceID = m_lastPickedID;
+    
+    // 更新模型边界
+    if (mModel) {
+        m_ubo.boundMax = mModel->boundsMax();
+        m_ubo.boundMin = mModel->boundsMin();
+        mProgram->updateGlobals(m_ubo);
+    }
+
+    if (needUpdate) {
+        mProgram->updateGlobals(m_ubo);
+    }
+}
+
+void ModelRenderer::renderModel() {
+    #ifndef ENABLE_INSTANCING
+    mModel->Draw(mProgram->getProgramId());
+    #else 
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glDepthMask(GL_FALSE);
+    mModel->DrawInstancedWind(mProgram->getProgramId(), INSTANCES_COUNT);
+    glDepthMask(GL_TRUE);
+    #endif
+}
+
+void ModelRenderer::renderAuxiliaryElements(const glm::mat4& viewMatrix, const glm::mat4& modelMatrix) {
+    // 渲染坐标轴
+    glDisable(GL_DEPTH_TEST);
+    mAxis->render(viewMatrix, m_projectionMatrix);
+    glEnable(GL_DEPTH_TEST);
+
+    // 渲染包围盒
+    if (mShowBoundingBox && mBoundingBoxRenderer && mModel) {
+        renderBoundingBoxes(viewMatrix, modelMatrix);
+    }
+}
+
+void ModelRenderer::renderBoundingBoxes(const glm::mat4& viewMatrix, const glm::mat4& modelMatrix) {
+    glm::vec3 minBounds = mModel->boundsMin();
+    glm::vec3 maxBounds = mModel->boundsMax();
+    glm::vec3 boundingBoxColor(1.0f, 1.0f, 0.0f);
+    
+    // 渲染全局模型包围盒
+    glm::mat4 mvpMatrix = mCamera->getProjectionMatrix() * viewMatrix * modelMatrix;
+    mBoundingBoxRenderer->drawBoundingBox(minBounds, maxBounds, mvpMatrix, boundingBoxColor);
+    
+    #ifdef ENABLE_INSTANCING
+    // 渲染实例包围盒
+    glm::vec3 instanceColor(0.0f, 1.0f, 1.0f);
+    for (int i = 0; i < INSTANCES_COUNT; i++) {
+        glm::mat4 instanceModelMatrix = render_instance_data[i].modelMatrix;
+        glm::mat4 instanceMvpMatrix = mCamera->getProjectionMatrix() * viewMatrix * instanceModelMatrix;
+        mBoundingBoxRenderer->drawBoundingBox(minBounds, maxBounds, instanceMvpMatrix, instanceColor);
+    }
+    #endif
 }

@@ -180,4 +180,28 @@ private:
     // auto& m_textureManager = GlobalTextureManager::getInstance();
     GlobalTextureManager* m_textureManager = nullptr;
 
+    // ========== 私有辅助方法 ==========
+    // 渲染相关辅助方法
+    void drawLoadingView();
+    void performFirstTimeInitialization();
+    void updateCameraIfNeeded();
+    void initializeTouchPadIfNeeded();
+    void performPickingIfRequested(const glm::mat4& modelMatrix, const glm::mat4& viewMatrix);
+    void renderScene(glm::mat4& viewMatrix, const glm::mat4& modelMatrix);
+    
+    // 初始化相关辅助方法
+    void initializeCameraSystem();
+    void initializeRenderingComponents();
+    void initializeUBOData();
+    void initializeInstancedData();
+    void initializeTextureManager();
+    
+    // 渲染流程辅助方法
+    void renderSkybox(glm::mat4& viewMatrix);
+    void setupModelRenderingState();
+    void updateUBOData(const glm::mat4& viewMatrix, const glm::mat4& modelMatrix);
+    void renderModel();
+    void renderAuxiliaryElements(const glm::mat4& viewMatrix, const glm::mat4& modelMatrix);
+    void renderBoundingBoxes(const glm::mat4& viewMatrix, const glm::mat4& modelMatrix);
+
 };
