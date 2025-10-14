@@ -49,7 +49,7 @@ private:
     float m_fov = 45.0f;
     float m_aspect = 16.0f / 9.0f;  // 宽高比
     float m_near = 0.1f;
-    float m_far = 1000.0f;
+    float m_far = 5000.0f;
 
     // --- 灵敏度控制 ---
     float m_orbitSpeed = 0.25f;

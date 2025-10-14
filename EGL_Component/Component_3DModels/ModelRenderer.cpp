@@ -121,11 +121,7 @@ void ModelRenderer::initGLES(const std::string& modelDir) {
     mLoadingViewProgram = std::make_unique<LoadingViewClass>();
     mSkybox = std::make_unique<Skybox>(modelDir);
 
-    // 初始化坐标轴 AxisHelper
-    AxisRenderer::Config axisConfig;
-    axisConfig.length = m_modelDepth * 0.1f;        // 使用0.1 而不是 0.8的原因是 线段渲染 线段有一个顶点在视锥体外 整条线段就会被裁剪
-    axisConfig.depthTest = false;
-    mAxis = std::make_unique<AxisRenderer>( axisConfig );
+
     
 
     // 开启混合 透明度
@@ -174,6 +170,12 @@ void ModelRenderer::draw() {
         mModel->uploadToGPU();
 
         mCamera = std::make_unique<Camera>();
+        // 初始化坐标轴 AxisHelper
+        AxisRenderer::Config axisConfig;
+        axisConfig.length = m_modelDepth * 0.1f;        // 使用0.1 而不是 0.8的原因是 线段渲染 线段有一个顶点在视锥体外 整条线段就会被裁剪
+        axisConfig.depthTest = false;
+        mAxis = std::make_unique<AxisRenderer>( axisConfig );
+        
         // 传递相机指针给CameraInterator
         m_cameraInteractor = std::make_unique<CameraInteractor>(mCamera.get());
 
@@ -181,7 +183,7 @@ void ModelRenderer::draw() {
         m_modelDepth = glm::length( mModel->boundsMax() - mModel->boundsMin() );
         mCamera->setTarget( glm::vec3( 0.0, 0.0, 0.0 ) );
         mCamera->setDistance( m_modelDepth * 0.7f );      // 根据模型大小设置一个合适的初始距离
-
+        std::cout << "Distance:" << m_modelDepth << std::endl;
         // PhongModelProgram.hpp 中类的名字也是ModelProgram 要切换Shader 只需要改变包含的 .hpp 文件即可
         mProgram = std::make_unique<ModelProgram>();
 
@@ -191,8 +193,28 @@ void ModelRenderer::draw() {
         // 在 glProgramLink 方法执行之后运行获取 Shader中变量位置并保存至缓存中的方法
         mProgram->cacheUniformLocations();
 
+        // 立即初始化UBO数据，避免使用未初始化的数据
+        m_ubo = {}; // 零初始化所有字段
+        m_ubo.proj = glm::mat4(1.0f);
+        m_ubo.view = glm::mat4(1.0f);
+        m_ubo.model = glm::mat4(1.0f);
+        m_ubo.time = 0.0f;
+        m_ubo.waveAmp = 1.0f;
+        m_ubo.waveSpeed = 5.0f;
+        m_ubo.pickedInstanceID = -1;  // 使用-1表示没有选中任何实例
+        m_ubo.color = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
+        m_ubo.deltaX = 0.0f;
+        m_ubo.deltaY = 0.0f;
+        // 初始化实例偏移数组
+        for (int i = 0; i < INSTANCES_COUNT; i++) {
+            m_ubo.instanceOffsets[i] = m_instanceOffsets[i];
+        }
+        // 立即更新到GPU
+        mProgram->updateGlobals(m_ubo);
+
         // 投影矩阵
         float aspect = static_cast<float>(mWidth) / static_cast<float>(mHeight);
+        //m_projectionMatrix = glm::perspective(glm::radians(45.0f), aspect, 0.1f, m_modelDepth * 20.0f);
         m_projectionMatrix = glm::perspective(glm::radians(45.0f), aspect, 0.1f, m_modelDepth * 20.0f);
         
         // 4. 初始化包围盒渲染器
@@ -223,11 +245,11 @@ void ModelRenderer::draw() {
         bool _flag_texture = false;
         _flag_texture = m_textureManager->loadTexture( m_modelDir + "/headtailmask.jpg", "cpp_vertexMovementTexture", false );  // unordered_map 在这个单例中创建 cpp_vertexMovementTexture 这个id 与 这个.jpg文件的唯一关联
         if (_flag_texture) { LOGI("Load texture success"); }
-        else { LOGE("Load texture failed"); }
+        else { LOGE("(Headtailmask)Load texture failed"); }
 
         _flag_texture = m_textureManager->bindToShader( "cpp_vertexMovementTexture", mProgram->getProgramId(), "vertexMovementTexture" );   // 绑定纹理到Shader // 绑定之后还需要在循环中激活
         if (_flag_texture) { LOGI("Load texture success"); }
-        else { LOGE("Load texture failed"); }
+        else { LOGE("(vertexmovement)Load texture failed"); }
         
     }
 
@@ -282,8 +304,9 @@ void ModelRenderer::draw() {
     // 视图矩阵
     glm::mat4 viewMatrix = mCamera->getViewMatrix();
 
-    if (m_touchPad && m_pickRequested) {
+    if ((m_touchPad && m_pickRequested) || mIsFirstAutomaticPicking) {
         m_pickRequested = false;
+        mIsFirstAutomaticPicking = false;
 
         m_globals->modelMatrix = modelMatrix;
         m_globals->viewMatrix = viewMatrix;
@@ -379,18 +402,14 @@ void ModelRenderer::draw() {
         m_ubo.time = wrappedTime;
         m_ubo.pickedInstanceID = m_lastPickedID;
         
-        // 如果没有初始化过UBO参数, 则设置默认值, 初始参数设置
-        static bool uboInitialized = false;
-        if (!uboInitialized) {
-            m_ubo.waveAmp = 1.0f;
-            m_ubo.waveSpeed = 5.0f;
-            needUpdate = true;
-            uboInitialized = true;
-        }
+        // 移除重复的UBO初始化，因为现在在mIsFirstDrawAfterModelLoaded中已经初始化过了
         
         if ( mModel ) {
             m_ubo.boundMax = mModel->boundsMax();
             m_ubo.boundMin = mModel-> boundsMin();
+            
+            // 第一次设置后立即更新边界信息
+            mProgram->updateGlobals(m_ubo);
         }
 
         // 只在有变化时更新UBO

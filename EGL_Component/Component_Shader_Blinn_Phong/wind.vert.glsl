@@ -44,7 +44,7 @@ layout(location=3) out float layerIndex;
 layout(location=4) out float heightFactor;
 layout(location=5) out vec4 ColorFromVertex;
 
-uniform sampler2D vertexMovementTexture;
+// uniform sampler2D vertexMovementTexture;
 
 void main() {
     // 将顶点位置和法线变换到世界空间

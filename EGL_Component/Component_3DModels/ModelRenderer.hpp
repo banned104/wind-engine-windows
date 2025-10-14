@@ -88,6 +88,7 @@ private:
     std::atomic<bool> mIsModelLoaded{false}; // 原子化布尔值 保证线程安全
     std::atomic<bool> mIsFirstDrawAfterModelLoaded{true};
     std::atomic<bool> mIsFirstTouchPadLoaded{true};
+    std::atomic<bool> mIsFirstAutomaticPicking{true};   // 程序一开始自动触发一次Pick渲染
 
     // 渲染相关
     std::unique_ptr<Model> mModel;

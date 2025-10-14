@@ -142,7 +142,7 @@ bool initGLFW() {
 
     // 初始化GLAD
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
-        std::cerr << "Failed to initialize GLAD" << std::endl;
+        std::cerr << "Failed to initialize GLAD1" << std::endl;
         return false;
     }
 

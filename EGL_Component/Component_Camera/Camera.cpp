@@ -46,7 +46,7 @@ void Camera::pan(float dx, float dy) {
 
 void Camera::zoom(float amount) {
     m_distance /= amount;
-    m_distance = std::clamp(m_distance, 0.1f, 1000.0f);
+    m_distance = std::clamp(m_distance, 0.1f, 5000.0f);
 }
 
 void Camera::setTarget(const glm::vec3& target) {

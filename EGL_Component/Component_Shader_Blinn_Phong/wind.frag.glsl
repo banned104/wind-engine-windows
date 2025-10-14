@@ -72,7 +72,8 @@ void main() {
     texColor.a = smoothstep(0.0, 0.7, brightness);
 
     // 拾取高亮效果
-    if (abs(float(uPickedInstanceID) - float(InstanceID)) < 0.01) {
+    if (uPickedInstanceID > 0 && abs(float(uPickedInstanceID) - float(InstanceID)) < 0.01) {
+    //if (abs(float(uPickedInstanceID) - float(InstanceID)) < 0.01) {
         texColor.r -= deltaX * 0.1;
         texColor.g -= deltaY * 0.1;
         texColor.b -= deltaX * 0.1;
