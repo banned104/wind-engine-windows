@@ -90,15 +90,31 @@ def generate_variable_name(filename):
         # 通用命名规则
         return file_name_without_ext.upper().replace('.', '_').replace('-', '_') + "_SHADER"
 
+def convert_version_for_android(content):
+    """将GLSL版本转换为Android兼容的版本"""
+    # 将 #version xxx core 替换为 #version 310 es
+    content = re.sub(r'#version\s+\d+\s+core', '#version 310 es', content)
+    
+    # 删除OpenGL特有的扩展指令（OpenGL ES不需要）
+    content = re.sub(r'#extension\s+GL_ARB_separate_shader_objects\s*:\s*enable\s*\n?', '', content)
+    content = re.sub(r'#extension\s+GL_ARB_shading_language_420pack\s*:\s*enable\s*\n?', '', content)
+    
+    # 在版本声明后添加精度声明（OpenGL ES必需）
+    content = re.sub(r'(#version\s+310\s+es\s*\n)', r'\1\nprecision highp float;\n', content)
+    
+    return content
+
 def main():
     # 检查命令行参数
-    if len(sys.argv) != 3:
-        print("用法: python Convert_GLSL_to_h.py <输入GLSL文件> <输出头文件>")
+    if len(sys.argv) < 3 or len(sys.argv) > 4:
+        print("用法: python Convert_GLSL_to_h.py <输入GLSL文件> <输出头文件> [--android]")
         print("示例: python Convert_GLSL_to_h.py wind.vert.glsl wind.vert.h")
+        print("示例: python Convert_GLSL_to_h.py wind.vert.glsl wind.vert.h --android")
         sys.exit(1)
     
     input_file = sys.argv[1]
     output_file = sys.argv[2]
+    is_android = len(sys.argv) == 4 and sys.argv[3] == '--android'
     
     # 检查输入文件是否存在
     if not os.path.exists(input_file):
@@ -121,6 +137,10 @@ def main():
         
         # 清理空白字符
         content = clean_whitespace(content)
+        
+        # 如果是Android版本，转换版本号
+        if is_android:
+            content = convert_version_for_android(content)
         
         # 确保内容不为空
         if not content.strip():
@@ -147,6 +167,8 @@ def main():
         print(f"成功转换: {input_file} -> {output_file}")
         print(f"变量名: {var_name}")
         print(f"内容长度: {len(content)} 字符")
+        if is_android:
+            print("已转换为Android版本(#version 310 es)")
         
     except Exception as e:
         print(f"错误: 转换失败 - {str(e)}")

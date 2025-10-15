@@ -118,6 +118,30 @@ private:
     // interleaved vertex: position (vec3) + color (vec3)
     std::vector<float> vertexData_; // will hold 12* (3+3) floats (6 main + 6 marker)
 
+#ifdef __ANDROID__
+    const char* vsSrc_ = R"GLSL(
+#version 310 es
+precision mediump float;
+layout(location=0) in vec3 inPos;
+layout(location=1) in vec3 inColor;
+uniform mat4 uMVP;
+out vec3 vColor;
+void main() {
+    gl_Position = uMVP * vec4(inPos, 1.0);
+    vColor = inColor;
+}
+)GLSL";
+
+    const char* fsSrc_ = R"GLSL(
+#version 310 es
+precision mediump float;
+in vec3 vColor;
+out vec4 fragColor;
+void main() {
+    fragColor = vec4(vColor, 1.0);
+}
+)GLSL";
+#else
     // Minimal shader sources (OpenGL 3.3 core)
     const char* vsSrc_ = R"GLSL(
 #version 330 core
@@ -139,6 +163,7 @@ void main() {
     fragColor = vec4(vColor, 1.0);
 }
 )GLSL";
+#endif
 
     bool compileShaders() {
         GLuint vs = glCreateShader(GL_VERTEX_SHADER);

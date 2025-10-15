@@ -16,6 +16,16 @@ ModelRenderer::ModelRenderer(GLFWwindow* window, const std::string& modelDir, in
     // 只需确保上下文是当前即可
     #ifndef __ANDROID__
     glfwMakeContextCurrent(mWindow);
+    #else
+
+    if (initEGL()) {
+        LOGI( "Now is Android running" );
+    } else {
+        LOGE("Failed to initialize EGL");
+        mIsInitialized = false;
+        return;
+    }
+    
     #endif
     
     // 验证OpenGL是否已初始化
@@ -43,12 +53,7 @@ ModelRenderer::ModelRenderer(GLFWwindow* window, const std::string& modelDir, in
     }
 
     if (mIsInitialized) {
-        #ifdef __ANDROID__
-        initEGL();
-        #else
         initGLES(modelDir);
-        #endif
-        
     }
 }
 
@@ -96,11 +101,13 @@ void ModelRenderer::draw() {
         return;
     }
     
+    #ifndef __ANDROID__
     // 显示加载界面（模型未加载完成时）
     if (!mIsModelLoaded) {
         drawLoadingView();
         return;
     }
+    #endif
 
     // ========== 一次性初始化 ==========
     performFirstTimeInitialization();
@@ -132,7 +139,7 @@ void ModelRenderer::draw() {
     #endif
 }
 
-#ifdef __ANDROID__
+#ifdef __ANDROID__      /* 如果是编译为安卓.so 修改destroy实现 添加 initEGL */
 bool ModelRenderer::initEGL() {
     // --- 这部分代码基本可以从你的 jni_cpp.cpp 中复制 ---
     mDisplay = eglGetDisplay(EGL_DEFAULT_DISPLAY);
@@ -200,13 +207,16 @@ void ModelRenderer::destroyEGL() {
     mSurface = EGL_NO_SURFACE;
     ANativeWindow_release(mWindow);
 }
-#else
+#else /* 如果是编译为安卓.so 修改destroy实现 添加 initEGL */
+
 void ModelRenderer::destroyOpenGL() {
     // 清理GLFW窗口
     glfwDestroyWindow(mWindow);
     glfwTerminate();
 }
+#endif
 
+/* initGLES 在编译为.so时需要保留  */
 void ModelRenderer::initGLES(const std::string& modelDir) {
     m_modelDir = modelDir;
     // 1. 加载模型
@@ -255,8 +265,12 @@ void ModelRenderer::initGLES(const std::string& modelDir) {
         LOGE("Failed to load model: %s", e.what());
         return;
     }
+
+    #ifndef __ANDROID__
     // 模型未完全载入时显示的OpenGL绘制的画面
     mLoadingViewProgram = std::make_unique<LoadingViewClass>();
+    #endif
+    
     mSkybox = std::make_unique<Skybox>(modelDir);
 
 
@@ -275,7 +289,7 @@ void ModelRenderer::initGLES(const std::string& modelDir) {
             );
 }
 
-#endif
+
 
 Camera& ModelRenderer::getCamera() {
      return *mCamera; 

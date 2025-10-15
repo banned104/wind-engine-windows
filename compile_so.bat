@@ -1,8 +1,8 @@
 @echo off
 chcp 65001 >nul
 
-python EGL_Component\Component_Shader_Blinn_Phong\Convert_GLSL_to_h.py EGL_Component\Component_Shader_Blinn_Phong\wind.frag.glsl   EGL_Component\Component_Shader_Blinn_Phong\wind.frag.h
-python EGL_Component\Component_Shader_Blinn_Phong\Convert_GLSL_to_h.py EGL_Component\Component_Shader_Blinn_Phong\wind.vert.glsl   EGL_Component\Component_Shader_Blinn_Phong\wind.vert.h
+python EGL_Component\Component_Shader_Blinn_Phong\Convert_GLSL_to_h.py EGL_Component\Component_Shader_Blinn_Phong\wind.frag.glsl   EGL_Component\Component_Shader_Blinn_Phong\wind.frag.h --android
+python EGL_Component\Component_Shader_Blinn_Phong\Convert_GLSL_to_h.py EGL_Component\Component_Shader_Blinn_Phong\wind.vert.glsl   EGL_Component\Component_Shader_Blinn_Phong\wind.vert.h --android
 
 python EGL_Component\Component_Shader_Blinn_Phong\validate_shaders.py
 if errorlevel 1 (

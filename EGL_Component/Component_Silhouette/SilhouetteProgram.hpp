@@ -33,6 +33,52 @@ private:
     std::unique_ptr<UniformBuffer> m_uboClass;
     GLuint blockIndex;
 
+
+    #ifdef __ANDROID__
+        constexpr static const char* vertex_shader = R"(
+        #version 310 es
+        precision mediump float;
+        
+        layout (location = 0) in vec3 aPos;
+        // layout (location = 1) in vec2 aTexCoords;
+        // layout (location = 2) in vec3 aNormal;
+        // layout (location = 3) in mat4 instanceTransform;
+
+        layout(std140) uniform Globals {
+            mat4 modelMatrix;
+            mat4 viewMatrix;
+            mat4 projMatrix;
+
+            uint id;
+        };
+
+        out vec2 TexCoords;
+        flat out uint instanceID;
+        
+        void main()
+        {
+            instanceID = id;
+            // 先计算变换后的位置
+            vec4 worldPos = modelMatrix * vec4(aPos, 1.0);
+            // 正常变换
+            gl_Position = projMatrix * viewMatrix * worldPos;
+        }
+    )";
+
+    constexpr static const char* frag_shader = R"(
+        #version 310 es
+        precision mediump float;
+        layout( location = 0 ) out uint out_id;
+
+        flat in uint instanceID;
+
+        void main()
+        {
+            out_id = instanceID;
+        }
+    )";
+
+    #else
     constexpr static const char* vertex_shader = R"(
         #version 330 core
         layout (location = 0) in vec3 aPos;
@@ -73,4 +119,6 @@ private:
             out_id = instanceID;
         }
     )";
+
+    #endif
 };

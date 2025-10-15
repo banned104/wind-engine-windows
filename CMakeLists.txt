@@ -112,9 +112,9 @@ target_include_directories(${TARGET_NAME}
 )
 
 # Copy resource files to output folder
-# add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-#     COMMAND ${CMAKE_COMMAND} -E copy_directory
-#     "${CMAKE_SOURCE_DIR}/models"
-#     "$<TARGET_FILE_DIR:${PROJECT_NAME}>/models"
-#     COMMENT "Copying models directory to output folder"
-# )
+add_custom_command(TARGET ${TARGET_NAME} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+    "${CMAKE_SOURCE_DIR}/models"
+    "$<TARGET_FILE_DIR:${TARGET_NAME}>/models"
+    COMMENT "Copying models directory to output folder"
+)

@@ -87,6 +87,34 @@ private:
         GLint colorLocation = -1;
         
         // 顶点着色器源码
+        #ifdef __ANDROID__
+                static constexpr const char* kVertexSrc = R"(
+            #version 310 es
+            precision mediump float;
+            
+            layout(location = 0) in vec3 aPosition;
+            
+            uniform mat4 uMVP;
+            
+            void main() {
+                gl_Position = uMVP * vec4(aPosition, 1.0);
+            }
+        )";
+        
+        // 片段着色器源码
+        static constexpr const char* kFragmentSrc = R"(
+            #version 310 es
+            precision mediump float;
+            
+            uniform vec3 uColor;
+            
+            out vec4 FragColor;
+            
+            void main() {
+                FragColor = vec4(uColor, 1.0);
+            }
+        )";
+        #else
         static constexpr const char* kVertexSrc = R"(
             #version 330 core
             precision mediump float;
@@ -113,6 +141,7 @@ private:
                 FragColor = vec4(uColor, 1.0);
             }
         )";
+        #endif
     };
     
     std::unique_ptr<BoundingBoxProgram> mProgram;
