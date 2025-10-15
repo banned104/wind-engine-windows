@@ -6,6 +6,7 @@ if(MSVC)
     # Disable C4034 warning for MSVC
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /wd4034")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd4034")
+    project(thread_cpp_glfw)
 elseif(MINGW)
     # MinGW/GCC specific flags
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-unused-parameter")
@@ -13,6 +14,7 @@ elseif(MINGW)
 endif()
 
 project(thread_cpp_glfw)
+set( TARGET_NAME "${PROJECT_NAME}" )
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -63,63 +65,56 @@ add_custom_target(generate_shaders
     DEPENDS ${GENERATED_HEADERS}
     COMMENT "Generating all shader header files"
 )
-
+# -----------------------------------------------------------------
 # Add EGL_Component library
 add_subdirectory(EGL_Component)
-
-if(Android)
-    set( LibName "MyLib")
-endif()
 
 # Make sure shaders are generated before building EGL_Component
 add_dependencies(EGL_Component generate_shaders)
 
 # Create executable
 if (MSVC)
-    add_executable(${PROJECT_NAME} main.cpp)
+    add_executable(${TARGET_NAME} main.cpp)
 else()
-    add_library(${PROJECT_NAME} SHARED jni_main.cpp)
+    set( TARGET_NAME "MyLib" )
+    add_library(${TARGET_NAME} SHARED jni_main.cpp)
 endif()
 
-# Link libraries based on platform
-target_link_libraries(${PROJECT_NAME} 
-    PRIVATE 
-    EGL_Component
-)
-
 if (ANDROID)
-    target_link_libraries(${PROJECT_NAME} 
+    target_link_libraries(${TARGET_NAME} 
         PRIVATE 
         GLESv3
         EGL
         log
         android
+        EGL_Component
     )
 elseif (WIN32)
     # Set GLFW as static library
     set(GLFW_BUILD_SHARED_LIBS OFF)
     # Find OpenGL for desktop
     find_package(OpenGL REQUIRED)
-    target_link_libraries(${PROJECT_NAME} 
+    target_link_libraries(${TARGET_NAME} 
         PRIVATE 
         glfw
         glad
         OpenGL::GL
         ${CMAKE_SOURCE_DIR}/EGL_Component/3rdparty/glad/include
         ${CMAKE_SOURCE_DIR}/EGL_Component/3rdparty/glfw/include
+        EGL_Component
     )
 endif()
 
 # Set include directories
-target_include_directories(${PROJECT_NAME} 
+target_include_directories(${TARGET_NAME} 
     PRIVATE 
     ${CMAKE_SOURCE_DIR}/EGL_Component
 )
 
 # Copy resource files to output folder
-add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_directory
-    "${CMAKE_SOURCE_DIR}/models"
-    "$<TARGET_FILE_DIR:${PROJECT_NAME}>/models"
-    COMMENT "Copying models directory to output folder"
-)
+# add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+#     COMMAND ${CMAKE_COMMAND} -E copy_directory
+#     "${CMAKE_SOURCE_DIR}/models"
+#     "$<TARGET_FILE_DIR:${PROJECT_NAME}>/models"
+#     COMMENT "Copying models directory to output folder"
+# )
