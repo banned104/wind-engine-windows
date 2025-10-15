@@ -1,7 +1,7 @@
 #ifndef _SHADER_LOADER_
 #define _SHADER_LOADER_
 
-#include<glad/glad.h>
+#include "macros.h"
 
 
 #include <stdio.h>

@@ -17,8 +17,17 @@
 #include <atomic>
 #include <ctime>
 #include <random>
+
+#ifdef __ANDROID__
+#include <EGL/egl.h>
+#include <GLES3/gl3.h>
+#include <android/native_window.h>
+#else
+// GLFW + GLAD
 #include <glad/glad.h>
+#define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
+#endif
 
 #include "ModelLoader_Universal_Instancing.hpp"
 // #include "Component_Shader_Blinn_Phong/PhongModelProgram.hpp"
@@ -51,8 +60,11 @@ class ModelRenderer
 {
 public:
     // 构造函数，接收GLFW窗口、模型路径和视口尺寸
+    #ifdef __ANDROID__
+    ModelRenderer( ANativeWindow* window, const std::string &modelDir, int width, int height);
+    #else
     ModelRenderer(GLFWwindow* window, const std::string &modelDir, int width, int height);
-
+    #endif
     // 析构函数，用于释放资源
     ~ModelRenderer();
     // 主绘制函数
@@ -76,10 +88,21 @@ private:
     bool initOpenGL();
     // 初始化 OpenGL 相关内容（模型、着色器、矩阵）
     void initGLES(const std::string &modelDir);
+
+    #ifdef __ANDROID__
+    ANativeWindow* mWindow;
+    // EGL 相关
+    EGLDisplay mDisplay = EGL_NO_DISPLAY;
+    EGLSurface mSurface = EGL_NO_SURFACE;
+    EGLContext mContext = EGL_NO_CONTEXT;
+    bool initEGL();
+    void destroyEGL();
+    #else
+    GLFWwindow* mWindow;
     // 释放 OpenGL 资源
     void destroyOpenGL();
+    #endif
 
-    GLFWwindow* mWindow;
     int mWidth;
     int mHeight;
 

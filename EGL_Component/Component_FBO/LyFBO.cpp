@@ -50,7 +50,11 @@ LyFBO::LyFBO(int width, int height, GLint internalFormat, GLenum format, GLenum 
 // }
 LyFBO::~LyFBO()
 {
+    #ifdef __ANDROID__
+    if (1) {
+    #else
     if( glfwGetCurrentContext() != nullptr ) {
+    #endif
         if ( fbo ) {
             GLES_CHECK_ERROR(glDeleteFramebuffers(1, &fbo));
             fbo = 0;

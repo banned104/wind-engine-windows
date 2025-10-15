@@ -78,8 +78,11 @@ IntFBO::IntFBO(int width, int height, GLint internalFormat, GLenum format, GLenu
 
 IntFBO::~IntFBO()
 {
-    // 检查当前是否有有效的OpenGL上下文
-    if (glfwGetCurrentContext() != nullptr) {
+    #ifdef __ANDROID__
+    if (1) {
+    #else
+    if( glfwGetCurrentContext() != nullptr ) {
+    #endif
         // 检查OpenGL对象是否有效再删除
         if (fbo != 0) {
             glDeleteFramebuffers(1, &fbo);

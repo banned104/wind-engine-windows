@@ -5,7 +5,7 @@
 #include <unordered_map>
 #include <filesystem>
 
-#include<glad/glad.h>
+#include "macros.h"
 #include <glm/glm.hpp>
 #include <assimp/Importer.hpp>
 #include <assimp/scene.h>

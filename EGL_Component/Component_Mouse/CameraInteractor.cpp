@@ -1,7 +1,12 @@
 #include "CameraInteractor.hpp"
 
 #include "macros.h"
+
+#ifdef _WIN32
 #include "corecrt_math_defines.h"
+#else
+#include <cmath> // For M_PI on non-Windows platforms
+#endif
 
 CameraInteractor::CameraInteractor(Camera* camera)
     : m_camera(camera) {

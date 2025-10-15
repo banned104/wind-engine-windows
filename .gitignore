@@ -3,3 +3,5 @@ CMakeLists.txt.user
 .cache
 build_win
 .vs
+build_android
+*.spv

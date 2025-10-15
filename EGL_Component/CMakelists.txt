@@ -26,8 +26,6 @@ target_include_directories(EGL_Component PUBLIC
                             ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/assimp/include
                             ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty
                             ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/SOIL2
-                            ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/glad/include
-                            ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/glfw/include
                             ${CMAKE_CURRENT_SOURCE_DIR}/component
                             ${CMAKE_CURRENT_SOURCE_DIR}/Common
                             ${CMAKE_CURRENT_SOURCE_DIR}/Component_FBO
@@ -47,17 +45,28 @@ target_include_directories(EGL_Component PUBLIC
                             ${CMAKE_CURRENT_SOURCE_DIR}/Component_AxisHelper
                             )
 
-# GLAD library
-add_subdirectory(3rdparty/glad)
+
 # Assimp library
 add_subdirectory(3rdparty/assimp)
-# GLFW library
-add_subdirectory(3rdparty/glfw)
 # SOIL2 library
 add_subdirectory(3rdparty/SOIL2)
 
+if(MSVC)
+    target_include_directories( EGL_Component PUBLIC 
+        ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/glad/include
+        ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/glfw/include
+    )
+endif()
+
 # EGL_Component has its own dependent libraries; any target that links EGL_Component will automatically link these libraries
 if(MSVC)
+# Find OpenGL package
+find_package(OpenGL REQUIRED)
+    
+# GLAD library
+add_subdirectory(3rdparty/glad)
+# GLFW library
+add_subdirectory(3rdparty/glfw)
     target_link_libraries(EGL_Component 
                         PUBLIC 
                         OpenGL::GL
@@ -71,11 +80,8 @@ else()
     # For MinGW and other compilers, use the built libraries
     target_link_libraries(EGL_Component 
                         PUBLIC 
-                        OpenGL::GL
-                        assimp
-                        zlib
-                        glfw
-                        glad
+                        ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/assimp/arm64-v8a/libassimp.a
+                        z
                         SOIL2
                         )
 endif()

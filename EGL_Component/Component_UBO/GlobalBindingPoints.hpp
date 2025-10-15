@@ -1,5 +1,5 @@
 #pragma once
-#include<glad/glad.h>
+#include "macros.h"
 /**
  * @brief 定义整个应用程序中使用的全局 Uniform Buffer Object (UBO) 绑定点。
  *

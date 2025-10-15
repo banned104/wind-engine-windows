@@ -3,11 +3,20 @@
 
 auto startTime = std::chrono::high_resolution_clock::now();
 
+
+#ifdef __ANDROID__
+ModelRenderer::ModelRenderer( ANativeWindow* window, const std::string& modelDir, int width, int height)
+    : mWindow(window), mWidth(width), mHeight(height) {
+#else
 ModelRenderer::ModelRenderer(GLFWwindow* window, const std::string& modelDir, int width, int height)
     : mWindow(window), mWidth(width), mHeight(height) {
+#endif
+
     // 移除重复的GLAD初始化，因为main.cpp已经初始化过了
     // 只需确保上下文是当前即可
+    #ifndef __ANDROID__
     glfwMakeContextCurrent(mWindow);
+    #endif
     
     // 验证OpenGL是否已初始化
     if (!glGetString(GL_VERSION)) {
@@ -34,7 +43,12 @@ ModelRenderer::ModelRenderer(GLFWwindow* window, const std::string& modelDir, in
     }
 
     if (mIsInitialized) {
+        #ifdef __ANDROID__
+        initEGL();
+        #else
         initGLES(modelDir);
+        #endif
+        
     }
 }
 
@@ -50,14 +64,21 @@ ModelRenderer::~ModelRenderer() {
         mBoundingBoxRenderer.reset();
     }
 
+    #ifdef __ANDROID__
+    destroyEGL();
+    #else
     destroyOpenGL();
+    #endif
     // unique_ptr 会自动释放 mModel 和 mProgram
-
 }
 
 bool ModelRenderer::initOpenGL() {
-    // 只需确保上下文是当前即可，不需要重复初始化GLAD
+    #ifndef __ANDROID__
     glfwMakeContextCurrent(mWindow);
+    #else
+
+    #endif
+    
     
     // 验证OpenGL是否可用
     if (!glGetString(GL_VERSION)) {
@@ -67,6 +88,123 @@ bool ModelRenderer::initOpenGL() {
     
     LOGI("OpenGL context verified successfully.");
     return true;
+}
+
+void ModelRenderer::draw() {
+    // ========== 早期返回检查 ==========
+    if (!mIsInitialized || !mOffscreenRenderer) {
+        return;
+    }
+    
+    // 显示加载界面（模型未加载完成时）
+    if (!mIsModelLoaded) {
+        drawLoadingView();
+        return;
+    }
+
+    // ========== 一次性初始化 ==========
+    performFirstTimeInitialization();
+    updateCameraIfNeeded();
+    initializeTouchPadIfNeeded();
+    
+    // ========== 每帧计算和更新 ==========
+    glm::mat4 modelMatrix = glm::mat4(1.0f);
+    glm::mat4 viewMatrix = mCamera->getViewMatrix();
+    
+    // 执行拾取操作（如果需要）
+    performPickingIfRequested(modelMatrix, viewMatrix);
+
+    // ========== 主渲染流程 ==========
+    mOffscreenRenderer->beginFrame();
+    
+    if (mIsModelLoaded && mModel) {
+        renderScene(viewMatrix, modelMatrix);
+    } else {
+        LOGE("mModel is NOT set");
+    }
+
+    mOffscreenRenderer->endFrame();
+    mOffscreenRenderer->drawToScreen();
+    #ifdef __ANDROID__
+    eglSwapBuffers(mDisplay, mSurface);
+    #else
+    glfwSwapBuffers(mWindow);
+    #endif
+}
+
+#ifdef __ANDROID__
+bool ModelRenderer::initEGL() {
+    // --- 这部分代码基本可以从你的 jni_cpp.cpp 中复制 ---
+    mDisplay = eglGetDisplay(EGL_DEFAULT_DISPLAY);
+    if (mDisplay == EGL_NO_DISPLAY) {
+        LOGE("eglGetDisplay failed");
+        return false;
+    }
+
+    if (eglInitialize(mDisplay, nullptr, nullptr) != EGL_TRUE) {
+        LOGE("eglInitialize failed");
+        return false;
+    }
+
+    EGLConfig config;
+    EGLint numConfigs;
+    EGLint configAttribs[] = {
+        EGL_SURFACE_TYPE, EGL_WINDOW_BIT,
+        EGL_RED_SIZE, 8,
+        EGL_GREEN_SIZE, 8,
+        EGL_BLUE_SIZE, 8,
+        EGL_DEPTH_SIZE, 24, // !! 添加深度缓冲配置，对于3D渲染至关重要 !!
+        EGL_RENDERABLE_TYPE, EGL_OPENGL_ES3_BIT, // 使用 GLES 3
+        EGL_NONE
+    };
+
+    if (eglChooseConfig(mDisplay, configAttribs, &config, 1, &numConfigs) != EGL_TRUE) {
+        LOGE("eglChooseConfig failed");
+        return false;
+    }
+
+    mSurface = eglCreateWindowSurface(mDisplay, config, mWindow, nullptr);
+    if (mSurface == EGL_NO_SURFACE) {
+        LOGE("eglCreateWindowSurface failed");
+        return false;
+    }
+
+    EGLint contextAttribs[] = { EGL_CONTEXT_CLIENT_VERSION, 3, EGL_NONE };
+    mContext = eglCreateContext(mDisplay, config, EGL_NO_CONTEXT, contextAttribs);
+    if (mContext == EGL_NO_CONTEXT) {
+        LOGE("eglCreateContext failed");
+        return false;
+    }
+
+    if (eglMakeCurrent(mDisplay, mSurface, mSurface, mContext) != EGL_TRUE) {
+        LOGE("eglMakeCurrent failed");
+        return false;
+    }
+    LOGI("EGL Initialized Successfully.");
+    return true;
+}
+
+void ModelRenderer::destroyEGL() {
+    if (mDisplay != EGL_NO_DISPLAY) {
+        eglMakeCurrent(mDisplay, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
+        if (mContext != EGL_NO_CONTEXT) {
+            eglDestroyContext(mDisplay, mContext);
+        }
+        if (mSurface != EGL_NO_SURFACE) {
+            eglDestroySurface(mDisplay, mSurface);
+        }
+        eglTerminate(mDisplay);
+    }
+    mDisplay = EGL_NO_DISPLAY;
+    mContext = EGL_NO_CONTEXT;
+    mSurface = EGL_NO_SURFACE;
+    ANativeWindow_release(mWindow);
+}
+#else
+void ModelRenderer::destroyOpenGL() {
+    // 清理GLFW窗口
+    glfwDestroyWindow(mWindow);
+    glfwTerminate();
 }
 
 void ModelRenderer::initGLES(const std::string& modelDir) {
@@ -137,50 +275,7 @@ void ModelRenderer::initGLES(const std::string& modelDir) {
             );
 }
 
-void ModelRenderer::draw() {
-    // ========== 早期返回检查 ==========
-    if (!mIsInitialized || !mOffscreenRenderer) {
-        return;
-    }
-    
-    // 显示加载界面（模型未加载完成时）
-    if (!mIsModelLoaded) {
-        drawLoadingView();
-        return;
-    }
-
-    // ========== 一次性初始化 ==========
-    performFirstTimeInitialization();
-    updateCameraIfNeeded();
-    initializeTouchPadIfNeeded();
-    
-    // ========== 每帧计算和更新 ==========
-    glm::mat4 modelMatrix = glm::mat4(1.0f);
-    glm::mat4 viewMatrix = mCamera->getViewMatrix();
-    
-    // 执行拾取操作（如果需要）
-    performPickingIfRequested(modelMatrix, viewMatrix);
-
-    // ========== 主渲染流程 ==========
-    mOffscreenRenderer->beginFrame();
-    
-    if (mIsModelLoaded && mModel) {
-        renderScene(viewMatrix, modelMatrix);
-    } else {
-        LOGE("mModel is NOT set");
-    }
-
-    mOffscreenRenderer->endFrame();
-    mOffscreenRenderer->drawToScreen();
-    glfwSwapBuffers(mWindow);
-}
-
-void ModelRenderer::destroyOpenGL() {
-    // 清理GLFW窗口
-    glfwDestroyWindow(mWindow);
-    glfwTerminate();
-}
-
+#endif
 
 Camera& ModelRenderer::getCamera() {
      return *mCamera; 
@@ -232,7 +327,11 @@ void ModelRenderer::drawLoadingView() {
     mLoadingViewProgram->draw();
     mOffscreenRenderer->endFrame();
     mOffscreenRenderer->drawToScreen();
+    #ifdef __ANDROID__
+    eglSwapBuffers(mDisplay, mSurface);
+    #else
     glfwSwapBuffers(mWindow);
+    #endif
 }
 
 void ModelRenderer::performFirstTimeInitialization() {
@@ -427,7 +526,7 @@ void ModelRenderer::performPickingIfRequested(const glm::mat4& modelMatrix, cons
 
 void ModelRenderer::renderScene(glm::mat4& viewMatrix, const glm::mat4& modelMatrix) {
     // 渲染天空盒
-    renderSkybox(viewMatrix);
+    //renderSkybox(viewMatrix);
     
     // 设置模型渲染状态
     setupModelRenderingState();
@@ -556,3 +655,4 @@ void ModelRenderer::renderBoundingBoxes(const glm::mat4& viewMatrix, const glm::
     }
     #endif
 }
+

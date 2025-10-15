@@ -1,4 +1,4 @@
-#include <glad/glad.h>
+#include "macros.h"
 #include "glm/glm.hpp"
 #include "ShaderProgram.hpp"
 
