@@ -52,32 +52,41 @@ void main() {
     float timeOffset = uTime * 0.1;
     vec2 moving_coords = vec2(TexCoords.x - timeOffset, TexCoords.y);
 
-    // 优化：使用纹理数组替代分支，减少分支预测失败
-    int layerIdx = int(layerIndex + 0.5); // 四舍五入到最近整数
-    if (layerIdx == 0) {
+    // 优化：使用纹理数组替代分支，减少分支预测失败 --> sampler 数组的索引必须是编译时常量 不能使用 数组+layerIdx 索引的方法
+    // 现代GPU分支预测和SIMD执行已经很优化 3个分支硬件处理很高效
+    
+    float opacity;
+    if (layerIndex < 0.05) {
         texColor = texture(material.texture_diffuse1, moving_coords);
-    } else if (layerIdx == 1) {
+        opacity = 0.0;  // 第0层完全透明
+    } else if (layerIndex - 1.0 < 0.05 )  {
         texColor = texture(material.texture_diffuse2, moving_coords);
+        opacity = 0.0;  // 第1层完全透明
     } else {
-        texColor = texture(material.texture_diffuse3, moving_coords);
+        texColor = texture(material.texture_diffuse3, vec2( moving_coords));
+        opacity = 0.8;  // 第2层有透明度
     }
 
+    vec3 windColor = vec3( 1. ) * 0.8;
+
     // 优化alpha裁剪判断，减少计算量
-    if (texColor.r < 0.1 || texColor.g < 0.1 || texColor.b < 0.1) {
+    if ((texColor.r + texColor.g + texColor.b)*0.3333 < 0.15) {
         discard;
+        // FragColor = vec4(0.);
+    } else {
+        FragColor = vec4( windColor, (texColor.r + texColor.g + texColor.b) * 0.33333 * opacity );
     }
 
     // 使用快速亮度计算
-    float brightness = dot(texColor.rgb, vec3(0.299, 0.587, 0.114));
-    texColor.a = smoothstep(0.0, 0.7, brightness);
+    // float brightness = dot(texColor.rgb, vec3(0.299, 0.587, 0.114));
+    // texColor.a = smoothstep(0.0, 0.7, brightness);
 
-    // 拾取高亮效果
-    if (uPickedInstanceID > 0 && abs(float(uPickedInstanceID) - float(InstanceID)) < 0.01) {
-    //if (abs(float(uPickedInstanceID) - float(InstanceID)) < 0.01) {
-        texColor.r -= deltaX * 0.1;
-        texColor.g -= deltaY * 0.1;
-        texColor.b -= deltaX * 0.1;
-    }
+    // // 拾取高亮效果
+    // if (uPickedInstanceID > 0 && abs(float(uPickedInstanceID) - float(InstanceID)) < 0.01) {
+    // //if (abs(float(uPickedInstanceID) - float(InstanceID)) < 0.01) {
+    //     texColor.r -= deltaX * 0.1;
+    //     texColor.g -= deltaY * 0.1;
+    //     texColor.b -= deltaX * 0.1;
+    // }
 
-    FragColor = texColor;
 }

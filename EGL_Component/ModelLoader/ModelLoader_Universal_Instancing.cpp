@@ -1,4 +1,4 @@
-#include "ModelLoader_Universal_Instancing.hpp"
+﻿#include "ModelLoader_Universal_Instancing.hpp"
 
 #include <stdexcept>
 #include <SOIL2/SOIL2.h>
@@ -119,7 +119,7 @@ void Model::processNode(aiNode* node, const aiScene* scene) {
         processNode(node->mChildren[i], scene);
     }
 
-    LOGI( "Meshes quantities: %d", static_cast<int>(m_meshes.size()) );
+    LOGI( "Meshes quantities add-up to : %d", static_cast<int>(m_meshes.size()) );
 }
 
 Mesh Model::processMesh(aiMesh* mesh, const aiScene* scene) {
@@ -164,11 +164,11 @@ Mesh Model::processMesh(aiMesh* mesh, const aiScene* scene) {
             std::string name;
             name = std::string(matName.C_Str());
         
-            LOGI("material %s: %d", name.c_str(), material->GetTextureCount(aiTextureType_AMBIENT));
-            LOGI("material %s: %d", name.c_str(), material->GetTextureCount(aiTextureType_DIFFUSE));
-            LOGI("material %s: %d", name.c_str(), material->GetTextureCount(aiTextureType_SPECULAR));
-            LOGI("material %s: %d", name.c_str(), material->GetTextureCount(aiTextureType_EMISSIVE));
-            LOGI("material %s: %d", name.c_str(), material->GetTextureCount(aiTextureType_HEIGHT));
+            LOGI("material %s aiTextureType_AMBIENT : %d", name.c_str(), material->GetTextureCount(aiTextureType_AMBIENT));
+            LOGI("material %s aiTextureType_DIFFUSE : %d", name.c_str(), material->GetTextureCount(aiTextureType_DIFFUSE));
+            LOGI("material %s aiTextureType_SPECULAR: %d", name.c_str(), material->GetTextureCount(aiTextureType_SPECULAR));
+            LOGI("material %s aiTextureType_EMISSIVE: %d", name.c_str(), material->GetTextureCount(aiTextureType_EMISSIVE));
+            LOGI("material %s aiTextureType_HEIGHT  : %d", name.c_str(), material->GetTextureCount(aiTextureType_HEIGHT));
 
         
         auto diffuseMaps = loadMaterialTextures(material, aiTextureType_DIFFUSE, "texture_diffuse", scene);
@@ -238,6 +238,8 @@ GLuint Model::textureFromFile(const std::string& path) {
     glBindTexture(GL_TEXTURE_2D, textureID);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glBindTexture(GL_TEXTURE_2D, 0);
     return textureID;
 }
@@ -331,48 +333,36 @@ void Model::DrawInstancedWind( GLuint program, GLuint instanceCount ) const {
         return;
     }
 
+    // 首先绑定所有diffuse纹理到正确的纹理单元
+    int textureUnit = 0;
+    for (size_t meshIndex = 0; meshIndex < m_meshes.size() && meshIndex < 3; ++meshIndex) {
+        const Mesh& mesh = m_meshes[meshIndex];
+        
+        // 查找该mesh的diffuse纹理
+        for (unsigned int i = 0; i < mesh.textures.size(); ++i) {
+            if (mesh.textures[i].type == "texture_diffuse") {
+                glActiveTexture(GL_TEXTURE0 + textureUnit);
+                glBindTexture(GL_TEXTURE_2D, mesh.textures[i].id);
+                
+                std::string uniformName = "material.texture_diffuse" + std::to_string(textureUnit + 1);
+                glUniform1i(glGetUniformLocation(program, uniformName.c_str()), textureUnit);
+                
+                textureUnit++;
+                break; // 每个mesh只取第一个diffuse纹理
+            }
+        }
+    }
+
+    // 然后绘制所有mesh
     for (size_t meshIndex = 0; meshIndex < m_meshes.size(); ++meshIndex) {
         const Mesh& mesh = m_meshes[meshIndex];
-        unsigned int diffuseNr = 1;
-        unsigned int specularNr = 1;
-        unsigned int normalNr = 1;
-        unsigned int ambientNr = 1;
-
-        for (unsigned int i = 0; i < mesh.textures.size(); ++i) {
-            glActiveTexture(GL_TEXTURE0 + i);
-            std::string number;
-            std::string name = mesh.textures[i].type;
-            std::string uniformName;
-            if (name == "texture_diffuse") {
-                // 根据网格索引为每个层设置不同的纹理单元
-                if (meshIndex < 3) { // 假设最多3个网格对应3层
-                    uniformName = "material.texture_diffuse" + std::to_string(meshIndex + 1);
-                } else {
-                    number = std::to_string(diffuseNr++);
-                    uniformName = "material.texture_diffuse" + number;
-                }
-            } 
-            else if (name == "texture_specular") {
-                number = std::to_string(specularNr++);
-                uniformName = "material.texture_specular" + number; 
-            } 
-            else if ( name == "texture_normal" ) {
-                number = std::to_string( normalNr++ );
-                uniformName = "material.texture_normal" + number;
-            }
-            else if ( name == "texture_ambient" ) {
-                number = std::to_string( ambientNr++ );
-                uniformName = "material.texture_ambient" + number;
-            }
-            glUniform1i(glGetUniformLocation(program, uniformName.c_str()), i);
-            glBindTexture(GL_TEXTURE_2D, mesh.textures[i].id);
-        }
-        
         const_cast<Mesh&>(mesh).DrawInstanced(instanceCount);
-        for (unsigned int i = 0; i < mesh.textures.size(); ++i) {
-            glActiveTexture(GL_TEXTURE0 + i);
-            glBindTexture(GL_TEXTURE_2D, 0);
-        }
+    }
+    
+    // 清理纹理绑定
+    for (int i = 0; i < textureUnit; ++i) {
+        glActiveTexture(GL_TEXTURE0 + i);
+        glBindTexture(GL_TEXTURE_2D, 0);
     }
     glActiveTexture(GL_TEXTURE0);
 }

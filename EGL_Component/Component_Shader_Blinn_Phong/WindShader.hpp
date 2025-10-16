@@ -2,8 +2,13 @@
 
 #include "ShaderProgram.hpp"
 
+#ifdef __ANDROID__
+#include "wind.vert.h"
+#include "wind.frag.h"
+#else
 #include "wind.vert.core.h"
 #include "wind.frag.core.h"
+#endif
 
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
