@@ -6,7 +6,6 @@ if(MSVC)
     # Disable C4034 warning for MSVC
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /wd4034")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd4034")
-    project(thread_cpp_glfw)
 elseif(MINGW)
     # MinGW/GCC specific flags
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-unused-parameter")
@@ -16,6 +15,8 @@ endif()
 project(thread_cpp_glfw)
 set( TARGET_NAME "${PROJECT_NAME}" )
 
+
+
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
@@ -24,6 +25,8 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 
+
+# -------------------------------------------------------
 # Find Python for GLSL conversion
 find_package(Python3 COMPONENTS Interpreter REQUIRED)
 
@@ -36,6 +39,7 @@ set(SHADER_FILES
     "${SHADER_DIR}/wind.vert.glsl"
     "${SHADER_DIR}/wind.frag.glsl"
 )
+set(PYTHON_ARGS "--pc")
 
 # Generate header files for each shader
 set(GENERATED_HEADERS)
@@ -45,7 +49,7 @@ foreach(SHADER_FILE ${SHADER_FILES})
     get_filename_component(SHADER_BASENAME ${SHADER_FILE} NAME)
     # Remove the .glsl extension to get the proper name (e.g., wind.vert, wind.frag)
     string(REGEX REPLACE "\\.glsl$" "" SHADER_NAME "${SHADER_BASENAME}")
-    set(HEADER_FILE "${SHADER_DIR}/${SHADER_NAME}.h")
+    set(HEADER_FILE "${SHADER_DIR}/${SHADER_NAME}.core.h")
     
     # Add to list
     list(APPEND GENERATED_HEADERS ${HEADER_FILE})
@@ -53,7 +57,7 @@ foreach(SHADER_FILE ${SHADER_FILES})
     # Create custom command to generate header file
     add_custom_command(
         OUTPUT ${HEADER_FILE}
-        COMMAND ${Python3_EXECUTABLE} ${GLSL_CONVERTER} ${SHADER_FILE} ${HEADER_FILE}
+        COMMAND ${Python3_EXECUTABLE} ${GLSL_CONVERTER} ${SHADER_FILE} ${HEADER_FILE} ${PYTHON_ARGS}
         DEPENDS ${SHADER_FILE} ${GLSL_CONVERTER}
         COMMENT "Converting ${SHADER_FILE} to C++ header"
         VERBATIM
@@ -65,7 +69,28 @@ add_custom_target(generate_shaders
     DEPENDS ${GENERATED_HEADERS}
     COMMENT "Generating all shader header files"
 )
+
+# -------------------------------------------------------
+# EGL_Component\Component_Shader_Blinn_Phong\Convert_GLSL_to_h.py
+# python Convert_GLSL_to_h.py wind.vert.glsl auto --pc
+# if(MSVC)
+#     add_custom_command(
+#         PRE_BUILD
+#         COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/EGL_Component/Component_Shader_Blinn_Phong/Convert_GLSL_to_h.py
+#                                         ${CMAKE_SOURCE_DIR}/EGL_Component/Component_Shader_Blinn_Phong/wind.vert.glsl
+#                                         auto
+#                                         --pc
+
+#         COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/EGL_Component/Component_Shader_Blinn_Phong/Convert_GLSL_to_h.py
+#                                         ${CMAKE_SOURCE_DIR}/EGL_Component/Component_Shader_Blinn_Phong/wind.frag.glsl
+#                                         auto
+#                                         --pc
+#         COMMENT "Generating shader header files for MSVC"
+#     )
+# endif()
+
 # -----------------------------------------------------------------
+
 # Add EGL_Component library
 add_subdirectory(EGL_Component)
 

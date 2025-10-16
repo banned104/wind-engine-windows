@@ -104,17 +104,58 @@ def convert_version_for_android(content):
     
     return content
 
+def convert_version_for_pc(content):
+    """为PC模式处理GLSL版本，保持OpenGL Core版本"""
+    # PC模式保持原有的OpenGL Core版本，不做特殊转换
+    # 如果版本行没有core，则添加core；如果已有core，则保持不变
+    if re.search(r'#version\s+\d+\s+core', content):
+        # 已经有core，不需要修改
+        return content
+    else:
+        # 没有core，添加core
+        content = re.sub(r'#version\s+(\d+)(?!\s+core)', r'#version \1 core', content)
+        return content
+
+def generate_pc_output_filename(input_file):
+    """为PC模式生成输出文件名"""
+    base_name = os.path.basename(input_file)
+    name_without_ext = os.path.splitext(base_name)[0]
+    
+    # 将 .vert.glsl 转换为 .vert.core.h，.frag.glsl 转换为 .frag.core.h
+    if name_without_ext.endswith('.vert'):
+        return name_without_ext + '.core.h'
+    elif name_without_ext.endswith('.frag'):
+        return name_without_ext + '.core.h'
+    else:
+        return name_without_ext + '.core.h'
+
 def main():
     # 检查命令行参数
     if len(sys.argv) < 3 or len(sys.argv) > 4:
-        print("用法: python Convert_GLSL_to_h.py <输入GLSL文件> <输出头文件> [--android]")
+        print("用法: python Convert_GLSL_to_h.py <输入GLSL文件> <输出头文件> [--android|--pc]")
         print("示例: python Convert_GLSL_to_h.py wind.vert.glsl wind.vert.h")
         print("示例: python Convert_GLSL_to_h.py wind.vert.glsl wind.vert.h --android")
+        print("示例: python Convert_GLSL_to_h.py wind.vert.glsl auto --pc")
         sys.exit(1)
     
     input_file = sys.argv[1]
     output_file = sys.argv[2]
-    is_android = len(sys.argv) == 4 and sys.argv[3] == '--android'
+    
+    # 检查模式参数
+    is_android = False
+    is_pc = False
+    if len(sys.argv) == 4:
+        if sys.argv[3] == '--android':
+            is_android = True
+        elif sys.argv[3] == '--pc':
+            is_pc = True
+        else:
+            print(f"错误: 不支持的模式参数 '{sys.argv[3]}'，支持的参数: --android, --pc")
+            sys.exit(1)
+    
+    # 如果是PC模式且输出文件名为auto，则自动生成文件名
+    if is_pc and output_file == 'auto':
+        output_file = generate_pc_output_filename(input_file)
     
     # 检查输入文件是否存在
     if not os.path.exists(input_file):
@@ -138,9 +179,11 @@ def main():
         # 清理空白字符
         content = clean_whitespace(content)
         
-        # 如果是Android版本，转换版本号
+        # 根据模式转换版本号
         if is_android:
             content = convert_version_for_android(content)
+        elif is_pc:
+            content = convert_version_for_pc(content)
         
         # 确保内容不为空
         if not content.strip():
@@ -169,6 +212,10 @@ def main():
         print(f"内容长度: {len(content)} 字符")
         if is_android:
             print("已转换为Android版本(#version 310 es)")
+        elif is_pc:
+            print("已转换为PC版本(OpenGL Core)")
+        else:
+            print("默认版本转换")
         
     except Exception as e:
         print(f"错误: 转换失败 - {str(e)}")

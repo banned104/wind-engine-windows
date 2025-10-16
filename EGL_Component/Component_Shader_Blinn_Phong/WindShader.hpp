@@ -2,8 +2,8 @@
 
 #include "ShaderProgram.hpp"
 
-#include "wind.vert.h"
-#include "wind.frag.h"
+#include "wind.vert.core.h"
+#include "wind.frag.core.h"
 
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
