@@ -287,14 +287,17 @@ void Model::DrawInstanced( GLuint program, GLuint instanceCount ) const {
         return;
     }
 
-    for (const Mesh& mesh : m_meshes) {
-        unsigned int diffuseNr = 1;
-        unsigned int specularNr = 1;
-        unsigned int normalNr = 1;
-        unsigned int ambientNr = 1;
+    unsigned int textureQuantities = 0;  // 修复1: 初始化为0
+    unsigned int diffuseNr = 1;          // 修复2: 从1开始计数
+    unsigned int specularNr = 1;
+    unsigned int normalNr = 1;
+    unsigned int ambientNr = 1;
 
+    for (const Mesh& mesh : m_meshes) {
         for (unsigned int i = 0; i < mesh.textures.size(); ++i) {
-            glActiveTexture(GL_TEXTURE0 + i);
+            unsigned int currentTextureUnit = textureQuantities + i;  // 修复3: 计算当前纹理单元
+            glActiveTexture(GL_TEXTURE0 + currentTextureUnit);
+            
             std::string number;
             std::string name = mesh.textures[i].type;
             std::string uniformName;
@@ -314,15 +317,18 @@ void Model::DrawInstanced( GLuint program, GLuint instanceCount ) const {
                 number = std::to_string( ambientNr++ );
                 uniformName = "material.texture_ambient" + number;
             }
-            glUniform1i(glGetUniformLocation(program, uniformName.c_str()), i);
+            glUniform1i(glGetUniformLocation(program, uniformName.c_str()), currentTextureUnit);  // 修复4: 使用正确的纹理单元号
             glBindTexture(GL_TEXTURE_2D, mesh.textures[i].id);
         }
+        textureQuantities += mesh.textures.size();  // 累积纹理数量
         
         const_cast<Mesh&>(mesh).DrawInstanced(instanceCount);
-        for (unsigned int i = 0; i < mesh.textures.size(); ++i) {
-            glActiveTexture(GL_TEXTURE0 + i);
-            glBindTexture(GL_TEXTURE_2D, 0);
-        }
+    }
+    
+    // 修复5: 清理所有使用过的纹理单元
+    for (unsigned int i = 0; i < textureQuantities; ++i) {
+        glActiveTexture(GL_TEXTURE0 + i);
+        glBindTexture(GL_TEXTURE_2D, 0);
     }
     glActiveTexture(GL_TEXTURE0);
 }

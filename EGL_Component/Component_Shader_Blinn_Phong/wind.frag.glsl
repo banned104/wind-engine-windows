@@ -58,19 +58,19 @@ void main() {
     float opacity;
     if (layerIndex < 0.05) {
         texColor = texture(material.texture_diffuse1, moving_coords);
-        opacity = 0.0;  // 第0层完全透明
+        opacity = 0.4;  // 第0层完全透明
     } else if (layerIndex - 1.0 < 0.05 )  {
         texColor = texture(material.texture_diffuse2, moving_coords);
-        opacity = 0.0;  // 第1层完全透明
+        opacity = 0.4;  // 第1层完全透明
     } else {
         texColor = texture(material.texture_diffuse3, vec2( moving_coords));
-        opacity = 0.8;  // 第2层有透明度
+        opacity = 0.5;  // 第2层有透明度
     }
 
     vec3 windColor = vec3( 1. ) * 0.8;
 
     // 优化alpha裁剪判断，减少计算量
-    if ((texColor.r + texColor.g + texColor.b)*0.3333 < 0.15) {
+    if ((texColor.r + texColor.g + texColor.b)*0.3333 < 0.05) {
         discard;
         // FragColor = vec4(0.);
     } else {
