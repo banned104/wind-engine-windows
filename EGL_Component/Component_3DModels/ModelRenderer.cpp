@@ -214,7 +214,7 @@ void ModelRenderer::destroyOpenGL() {
     glfwDestroyWindow(mWindow);
     glfwTerminate();
 }
-#endif
+#endif /* __ANDROID__ */
 
 /* initGLES 在编译为.so时需要保留  */
 void ModelRenderer::initGLES(const std::string& modelDir) {
@@ -450,18 +450,20 @@ void ModelRenderer::initializeTextureManager() {
     m_textureManager = &GlobalTextureManager::getInstance();
     m_textureManager->initialize();
     
-    bool flag_texture = m_textureManager->loadTexture(m_modelDir + "/headtailmask.jpg", "cpp_vertexMovementTexture", false);
+    // 加载图片到 map容器 -> m_textures; key = "cpp_vertexMovementTexture"
+    bool flag_texture = m_textureManager->loadTexture(m_modelDir + "/chufengmask.jpg", "fadeEdgeMask", false);
     if (flag_texture) {
-        LOGI("Load texture success");
+        LOGI(" (fadeEdgeMask) Load texture success");
     } else {
-        LOGE("(Headtailmask)Load texture failed");
+        LOGE("(fadeEdgeMask)Load texture failed");
     }
     
-    flag_texture = m_textureManager->bindToShader("cpp_vertexMovementTexture", mProgram->getProgramId(), "vertexMovementTexture");
+    //  BUGFIXED -> 检测到错误 m_texture 绑定纹理到了 TEXTURE0 与ModelLoader纹理冲突
+    flag_texture = m_textureManager->bindToShader("fadeEdgeMask", mProgram->getProgramId(), "fadeEdgeMaskTexture");
     if (flag_texture) {
-        LOGI("Load texture success");
+        LOGI("(fadeEdgeMask) Load texture success");
     } else {
-        LOGE("(vertexmovement)Load texture failed");
+        LOGE("(fadeEdgeMask) Load texture failed");
     }
 }
 

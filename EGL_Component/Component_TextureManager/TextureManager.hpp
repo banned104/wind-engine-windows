@@ -273,8 +273,8 @@ private:
     // Shader绑定信息
     std::unordered_map<std::string, std::vector<ShaderBinding>> m_shaderBindings;
 
-    // 纹理单元分配器
-    GLint m_nextTextureUnit = 0;
+    // 纹理单元分配器 从 纹理单元 TEXTURE 20 开始分配 防止与ModelLoader的纹理冲突;
+    GLint m_nextTextureUnit = 20;
 
     // 默认纹理参数
     GLenum m_defaultWrapS = GL_REPEAT;

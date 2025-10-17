@@ -46,6 +46,8 @@ struct Material {
 };
 uniform Material material;
 
+uniform sampler2D fadeEdgeMaskTexture;
+
 void main() {
     vec4 texColor;
     // 优化：预计算时间偏移，避免每片元执行mod运算
@@ -58,23 +60,29 @@ void main() {
     float opacity;
     if (layerIndex < 0.05) {
         texColor = texture(material.texture_diffuse1, moving_coords);
-        opacity = 0.4;  // 第0层完全透明
+        opacity = 0.4;  // 第0层 2Edges Lines
     } else if (layerIndex - 1.0 < 0.05 )  {
         texColor = texture(material.texture_diffuse2, moving_coords);
-        opacity = 0.4;  // 第1层完全透明
+        opacity = 0.4;  // 第1层 Middle Fog
     } else {
         texColor = texture(material.texture_diffuse3, vec2( moving_coords));
-        opacity = 0.5;  // 第2层有透明度
+        opacity = 0.5;  // 第2层 Dotted Lines
     }
 
     vec3 windColor = vec3( 1. ) * 0.8;
-
+    
     // 优化alpha裁剪判断，减少计算量
     if ((texColor.r + texColor.g + texColor.b)*0.3333 < 0.05) {
         discard;
         // FragColor = vec4(0.);
     } else {
-        FragColor = vec4( windColor, (texColor.r + texColor.g + texColor.b) * 0.33333 * opacity );
+        const float FADE_THREASHHOLD = 0.2;
+        vec4 tempTexture = texture( fadeEdgeMaskTexture, TexCoords );
+        float tempFactor = ( tempTexture.r + tempTexture.g + tempTexture.b )*0.33333;
+        tempFactor = 1.0 - smoothstep( FADE_THREASHHOLD, 0.15, tempFactor ) * tempFactor;  // 反转
+        tempFactor = mix( 0.0, tempFactor, step( FADE_THREASHHOLD, tempFactor ));           // 丢弃黑色部分
+        FragColor = vec4( windColor, (texColor.r + texColor.g + texColor.b) * 0.33333 * opacity * tempFactor );
+        // FragColor = vec4( windColor, tempFactor );
     }
 
     // 使用快速亮度计算
