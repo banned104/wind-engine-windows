@@ -13,7 +13,7 @@ Wind Engine 是一个跨平台的现代化 C++ 3D 渲染引擎，专注于高性
 
 ### 效果预览
 
-![Wind Engine 渲染效果预览](Docs\PixPin_2025-10-26_01-08-52.png)
+![Wind Engine 渲染效果预览](Docs/PixPin_2025-10-26_01-08-52.png)
 
 ### 核心渲染功能
 - **跨平台支持**: Windows (GLFW + OpenGL Core) 和 Android (EGL + OpenGL ES 3.0)
